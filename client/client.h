@@ -2,36 +2,42 @@
 #define CLIENT_H
 
 //Structs:
-struct mapdata {
-  unsigned int height;
-  unsigned int width;
-};
 
 struct playerdata {
-  unsigned int id;
-  unsigned int x_coord;
-  unsigned int y_coord;
-  unsigned int hp;
-  unsigned int sign;
+  uint8_t id;
+  uint8_t x_coord;
+  uint8_t y_coord;
+  uint8_t hp;
+  char sign;
 };
 
 struct gamedata {
-  unsigned int player_count;
-  unsigned int monster_count;
+  uint8_t player_count;
+  uint8_t monster_count;
+  uint8_t map_height;
+  uint8_t map_width;
   struct playerdata *players;
 };
 
 
 //Functions:
 
-//Draws the map to controlling terminal based on the current game state
-int drawMap(struct mapdata, struct gamedata);
+//Create map by allocating memory and drawing walls
+char **createMap(char **map, struct gamedata);
+
+//Update map to show current player position and monster positions
+int updateMap(char **map, struct gamedata);
 
 //Get action from terminal
 char getInput();
 
 //Handle received input
-int processCommand(struct mapdata *, struct playerdata *, char);
+int processCommand(char **, struct playerdata *, char);
+
+//Action related:
+int attackMonster(char**, int, int);
+int checkWall(char **, int, int);
+int makeAMove(char **, int, int);
 
 //Read data from server
 int readServer();
