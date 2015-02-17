@@ -22,17 +22,25 @@ struct gamedata {
 
 //Functions:
 
+char **new_message(char *, char **, int);
+
+void print_messages(char **, int);
+
 //Create map by allocating memory and drawing walls
-char **createMap(char **map, struct gamedata);
+char **createMap(char **, struct gamedata);
 
 //Update map to show current player position and monster positions
-int updateMap(char **map, struct gamedata);
+//int updateMap(char **map, struct gamedata *);
+void *updateMap(void *);
+
+//Update game info from a string buffer
+void updateGame(char *);
 
 //Get action from terminal
-char getInput();
+char getInput(char **, int);
 
 //Handle received input
-int processCommand(char **, struct playerdata *, char);
+char *processCommand(char **, struct playerdata *, char, char *);
 
 //Action related:
 int attackMonster(char**, int, int);
