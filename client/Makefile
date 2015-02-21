@@ -1,3 +1,3 @@
 PROGS=client
-CC=gcc -g -Wall
+CC=gcc -g -Wall -pthread
 all: ${PROGS}

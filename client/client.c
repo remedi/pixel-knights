@@ -11,6 +11,7 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <sys/stat.h>
+#include <sys/un.h>
 
 #include "client.h"
 
@@ -21,7 +22,7 @@
 
 /*Global variables used by thread*/
 char **map = NULL;
-struct gamedata game;
+struct gamedata global_game;
 int sock;
 int gametype;
 char **msg_arr;
@@ -30,12 +31,14 @@ int global_msg_count;
 char **new_message(char *buf, char **msg_array, int msg_count) {
   int i;
   char *temp_ptr = msg_array[msg_count-1];
+  //Rearrange pointers
   for(i = (msg_count-1); i>0; i--) {
     msg_array[i] = msg_array[i-1];
   }
   msg_array[0] = temp_ptr;
-  memset(msg_array[0], '\0', BUFLEN);
-  memcpy(msg_array[0], buf, BUFLEN);
+  memset(msg_array[0], '\0', MSGLEN);
+  //Add newest message as first
+  memcpy(msg_array[0], buf, MSGLEN);
   return msg_array;
 }
 
@@ -57,16 +60,18 @@ struct sockaddr_in ipv4_parser(char *ip, char *port) {
   return temp;
 }
 
-char getInput(char **msg_array, int msg_count) {
+char getInput(char **msg_array, int msg_count, char *prefix) {
   char character;
   char buf[40];
+  char fixed_buf[50];
   character = getchar();
   if(character == 'c') {
     printf("\n Enter max 40 bytes message: ");
     fgets(buf, 40, stdin);
     //Remove last newline:
     buf[strlen(buf)-1] = '\0';
-    new_message(buf, msg_array, msg_count);
+    sprintf(fixed_buf, "%s: %s", prefix, buf);
+    new_message(fixed_buf, msg_array, msg_count);
   }
   printf("\n");
   return character;
@@ -93,6 +98,7 @@ char *processCommand(char **map, struct playerdata *player, char input, char *bu
   char y = player->y_coord;
   char init_x = x;
   char init_y = y;
+  char player_id = player->id;
   memset(buf, '\0', BUFLEN);
 
   switch(input) {
@@ -113,17 +119,17 @@ char *processCommand(char **map, struct playerdata *player, char input, char *bu
     break;
   }
   if(attackMonster(map, x, y) == 0) {
-    sprintf(buf, "%c%c%c", 1, init_x, init_y);
+    sprintf(buf, "%c%c%c", player_id, init_x, init_y);
     return buf;
   }
   else if(checkWall(map, x, y) == 0) {
-    sprintf(buf, "%c%c%c", 1, init_x, init_y);
+    sprintf(buf, "%c%c%c", player_id, init_x, init_y);
     return buf;
   }
   else {
     //player->y_coord = y;
     //player->x_coord = x;
-    sprintf(buf, "%c%c%c", 1, x, y);
+    sprintf(buf, "%c%c%c", player_id, x, y);
     //printf("DEBUG: Returning command: %s\n", buf);
     return buf;
   }
@@ -131,11 +137,7 @@ char *processCommand(char **map, struct playerdata *player, char input, char *bu
   return buf;
 }
 
-
-
-
 char **createMap(char **rows, struct gamedata game) {
-
   int height = game.map_height;
   int width = game.map_width;
   int i;
@@ -175,97 +177,104 @@ char **createMap(char **rows, struct gamedata game) {
   return rows;
 }
 void updateGame(char *buf) {
-  uint8_t player_count = 0;
-  struct playerdata *players = game.players;
-  int i = 0;
+  struct playerdata *players = global_game.players;
+  int j = 0;
+  /*  uint8_t player_count = 0;
   memcpy(&player_count, buf, 1);
-  buf++;
+  buf++;*/
 
   //printf("Player count: %d\n", (int) player_count);
   while(*buf != '\0') {
-    players[i].x_coord = *buf;
-    buf++;
-    players[i].y_coord = *buf;
-    buf++;
-    i++;
+    for(j = 0; j<(int) global_game.player_count; j++) {
+      if(players[j].id == *buf) {
+	buf++;
+	players[j].x_coord = *buf;
+	buf++;
+	players[j].y_coord = *buf;
+	buf++;
+      }
+    }
   }
   return;
 }
 
-//This function is handled by a thread
 void *updateMap(void *arg) {
-  struct playerdata *players = game.players;
-  int player_count = game.player_count;
+  //This function is handled by a thread
+  struct playerdata *players = global_game.players;
+  int player_count = global_game.player_count;
   int x, y;
-  int height = game.map_height;
+  int height = global_game.map_height;
   int i, j = 0;
   char buf[BUFLEN];
-  char prev_buf[BUFLEN];
   ssize_t bytes;
+  struct sockaddr_un thread_addr;
+  int sock_t;
+
+  strcpy(thread_addr.sun_path, "socket");
+  thread_addr.sun_family = AF_UNIX;
   memset(buf, '\0', BUFLEN);
-  memset(prev_buf, '\0', BUFLEN);
-  /*int pipe_read = open("cmd_pipe", 0);
-  if(pipe_read < 0) {
-    perror("open, thread");
-    }*/
   if(map == NULL) {
     printf("updateMap received NULL as map\n");
     exit(-1);
   }
+
+  sock_t = socket(AF_UNIX, SOCK_STREAM, 0);
+  if(sock_t < 0) {
+    perror("thread, socket");
+  }
+  printf("Thread: Connecting..\n");
+  if(connect(sock_t, (struct sockaddr *) &thread_addr, sizeof(thread_addr)) < 0) {
+    perror("thread, connect");
+  }
+  else {
+    perror("Thread, connect");
+  }
   while(1) {
     if(gametype == NETGAME) {
       printf("Thread: Waiting for server..\n");
-      read(sock, buf, BUFLEN);
+      read(sock_t, buf, BUFLEN);
       printf("Thread: Server: %s\n", buf);
     }
     else if(gametype == LOCALGAME) {
-      printf("Thread: Reading the pipe..\n");
-      bytes = read(sock, buf, BUFLEN);
-      if(bytes < 0) {
-	perror("read, thread");
+      //printf("Thread: Reading the pipe..\n");
+      bytes = read(sock_t, buf, BUFLEN);
+      if(bytes <= 0) {
+	//perror("thread, read");
+	continue;
       }
       else {
-	printf("Thread: Read %lu bytes from a pipe: %d\n", bytes, sock);
+	printf("Thread: Read %lu bytes from a socket: %d\n", bytes, sock_t);
       }
-      //Exit the thread:
       if(buf[0] == 'q') {
+        //Exit the thread:
 	break;
       }
-      //Draw map again
       else if(buf[0] == 'u') {
-	printf("Thread: Drawing map again\n");
-	updateGame(prev_buf);
+        //Draw map again
+	printf("Thread: Drawing map based on old information\n");
       }
       else {
 	updateGame(buf);
-	memset(prev_buf, '\0', BUFLEN);
-	memcpy(prev_buf, buf, BUFLEN);
 	memset(buf, '\0', BUFLEN);
       }
     }
     //system("clear");
-    //Add players
-
     for(i = 0; i<player_count; i++) {
+      //Add players
       x = players[i].x_coord;
       y = players[i].y_coord;
-      map[y][x] = 'K';
+      map[y][x] = players[i].name[0];
     }
     //Add monsters
-    //Actual drawing
     printf("\n");
     for(i = 0; i<height; i++) {
-      printf("%s", map[i]);
-      if(i<global_msg_count) {
-	printf("\t\t%s\n", msg_arr[i]);
-      }
-      else {
-	printf("\n");
-      }
+      //Actual drawing
+      printf("\t%s", map[i]);
+      printf("\t\t%s\n", msg_arr[global_msg_count-i-1]);
     }
     printf("\n");
-    //Undo changes
     for(i = 0; i<player_count; i++) {
+      //Undo changes
       x = players[i].x_coord;
       y = players[i].y_coord;
       map[y][x] = ' ';
@@ -284,16 +293,18 @@ void *updateMap(void *arg) {
 int main(int argc, char *argv[]) {
   char input_char = 1;
   struct playerdata player1;
-  int i;
-  int height;
+  int i, height, sockfd;
   char namebuffer[10];
   struct sockaddr_in addr;
+  struct sockaddr_un sock_addr, other_end;
   char *buffer = malloc(BUFLEN);
   pthread_t thread;
   ssize_t bytes;
-  struct termios oldt, newt;
+  struct termios save_term, conf_term;
   char **message_array;
   int message_count;
+  socklen_t len_other_end;
+  int new_term_settings;
 
   if(argc == 1) {
     printf("-----------------\n");
@@ -319,48 +330,68 @@ int main(int argc, char *argv[]) {
     exit(-1);
   }
 
+  memset(&len_other_end, 0, sizeof(len_other_end));
 
+  //Delete previous socket, if the program was killed
+  if(unlink("socket") == 0) {
+    printf("Previous socket was found and removed.\n");
+  }
 
-  game.player_count = 1;
-  game.monster_count = 0;
-  game.map_height = 10;
-  game.map_width = 10;
+  global_game.player_count = 1;
+  global_game.monster_count = 0;
+  global_game.map_height = 10;
+  global_game.map_width = 10;
 
-  message_count = game.map_height;
+  message_count = global_game.map_height;
   global_msg_count = message_count;
 
   message_array = malloc(sizeof(char *) * message_count);
   msg_arr = message_array;
 
   for(i = 0; i<message_count; i++) {
-    message_array[i] = malloc(sizeof(char) * BUFLEN);
-    memset(message_array[i], '\0', BUFLEN);
+    message_array[i] = malloc(sizeof(char) * MSGLEN);
+    memset(message_array[i], '\0', MSGLEN);
   }
-
 
   player1.id = 1;
   player1.x_coord = 1;
   player1.y_coord = 1;
   player1.hp = 5;
-  player1.sign = 'K';
+  strcpy(player1.name, "User");
 
-  game.players = &player1;
+  global_game.players = &player1;
 
-  if(tcgetattr(STDIN_FILENO, &oldt) == -1) {
+  //Get terminal settings
+  if(tcgetattr(STDIN_FILENO, &save_term) == -1) {
     perror("tcgetattr");
   }
-  newt = oldt;
-  newt.c_lflag = newt.c_lflag + ICANON;
-  if(tcsetattr(STDIN_FILENO, TCSANOW, &newt) == -1) {
+  conf_term = save_term;
+  new_term_settings = ICANON;
+  conf_term.c_lflag = (conf_term.c_lflag & ~new_term_settings);
+  //Set new settings
+  if(tcsetattr(STDIN_FILENO, TCSANOW, &conf_term) == -1) {
     perror("tcsetattr");
   }
+  //Check that mode actually changed
+  memset(&conf_term, 0, sizeof(conf_term));
+  if(tcgetattr(STDIN_FILENO, &conf_term) == -1) {
+    perror("tcgetattr");
+  }
+  else {
+    if((conf_term.c_lflag & new_term_settings) == 0) {
+      printf("Terminal settings succesfully changed\n");
+    }
+    else {
+      printf("Error with term settings: Had: %d Wanted to add: %d. Bitwise: %d\n", conf_term.c_lflag, new_term_settings, (conf_term.c_lflag & new_term_settings));
+      exit(-1);
+    }
+  }
 
-  map = createMap(map, game);
+  map = createMap(map, global_game);
   if(map == NULL) {
     printf("createMap error");
     //exit(-1);
   }
-
 
   if(gametype == NETGAME) {
     printf("Initializing netgame\n");
@@ -380,7 +411,7 @@ int main(int argc, char *argv[]) {
     }
 
     while(input_char != '0' && input_char != 'q') {
-      input_char = getInput(message_array, message_count);
+      input_char = getInput(message_array, message_count, player1.name);
       if(input_char == 0) {
 	printf("getInput error\n");
 	exit(-1);
@@ -392,7 +423,7 @@ int main(int argc, char *argv[]) {
       //read(sock, buffer, BUFLEN);
       //SEND COMMAND
       pthread_create(&thread, NULL, updateMap, NULL);
-      printf("Main: Writing to buffer\n");
+      printf("Parent: Writing to buffer\n");
       write(sock, buffer, BUFLEN);
     }
   }
@@ -400,29 +431,51 @@ int main(int argc, char *argv[]) {
 
   else if(gametype == LOCALGAME) {
 
-    if(mkfifo("cmd_pipe", 00666) == -1) {
+    /*if(mkfifo("cmd_pipe", 00666) == -1) {
       perror("mkfifo");
-    }
-    sock = open("cmd_pipe", O_RDWR);
+      }
+      sock = open("cmd_pipe", O_RDWR);*/
+
+    sock = socket(AF_UNIX, SOCK_STREAM, 0);
     if(sock < 0) {
-      perror("open, main");
+      perror("Parent, socket");
       exit(-1);
     }
-
+    memset(&sock_addr, 0, sizeof(sock_addr));
+    sock_addr.sun_family = AF_UNIX;
+    strcpy(sock_addr.sun_path, "socket");
+    if(bind(sock, (struct sockaddr *) &sock_addr, sizeof(sock_addr)) == -1) {
+      perror("bind");
+    }
     if(pthread_create(&thread, NULL, updateMap, NULL) < 0) {
       perror("pthread_create");
     }
-    if(write(sock, "111", 1) < 1) {
+    if(listen(sock, 1) == -1) {
+      perror("listen");
+    }
+
+    printf("Parent: Waiting for a connection..\n");
+    sockfd = accept(sock, (struct sockaddr *) &other_end, &len_other_end);
+    if(sockfd < 0) {
+      perror("Parent, accept");
+      exit(-1);
+    }
+    else {
+      perror("Parent, accept");
+    }
+    printf("Parent: Sending update map command to the pipe %d\n", sockfd);
+    if(write(sockfd, "u", 1) < 1) {
       printf("Mapupdate error\n");
     }
     while(1) {
-      input_char = getInput(message_array, message_count);
+      //Get character or message from terminal
+      input_char = getInput(message_array, message_count, player1.name);
       if(input_char == 0) {
 	printf("getInput error\n");
 	exit(-1);
       }
       else if(input_char == 'c') {
-	write(sock, "u", 1);
+	write(sockfd, "u", 1);
 	continue;
       }
       else if(input_char == 'q' || input_char == '0') {
@@ -430,37 +483,58 @@ int main(int argc, char *argv[]) {
       }
       else if(input_char == 'p') {
 	print_messages(message_array, message_count);
-	write(sock, "u", 1);
+	write(sockfd, "u", 1);
 	continue;
       }
       memset(buffer, '\0', BUFLEN);
       processCommand(map, &player1, input_char, buffer);
       if(strlen(buffer) == 0) {
 	printf("Not valid command!\n");
-	write(sock, "u", 1);
+	write(sockfd, "u", 1);
 	continue;
       }
-      printf("Main: Wrote ");
-      bytes = write(sock, buffer, strlen(buffer));
-      printf("%lu bytes to pipe: %d\n", bytes, sock);
+      printf("Parent: Wrote ");
+      bytes = write(sockfd, buffer, strlen(buffer));
+      //This message sometimes comes after the thread is updating map already, messing things up
+      printf("%lu bytes to socket: %d\n", bytes, sockfd);
       //system("clear");
     }
   }
 
   //Perform clean up:
-  write(sock, "q", 1);
+  write(sockfd, "q", 1);
   if(pthread_join(thread, NULL) < 0) {
     perror("pthread_join");
   }
   //Free memory
-  height = game.map_height;
+  height = global_game.map_height;
   for(i = 0; i<height; i++) {
     free(map[i]);
   }
   free(map);
   free(buffer);
-  unlink("cmd_pipe");
-  tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+
+  for(i = 0; i<message_count; i++) {
+    free(message_array[i]);
+  }
+
+  free(message_array);
+
+  unlink("socket");
+  
+  //Set back oldsettings
+  tcsetattr(STDIN_FILENO, TCSANOW, &save_term);
+  memset(&conf_term, 0, sizeof(conf_term));
+  if(tcgetattr(STDIN_FILENO, &conf_term) == -1) {
+    perror("tcgetattr");
+  }
+  if(conf_term.c_lflag == save_term.c_lflag) {
+    printf("Old terminal settings succesfully restored\n");
+  }
+  else {
+    printf("Error restoring terminal settings. Old: %d New: %d\n", save_term.c_lflag, conf_term.c_lflag);
+  }
+
   printf("Clean-up done, exiting\n");
   exit(0);
 }
