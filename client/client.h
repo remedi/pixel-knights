@@ -22,11 +22,11 @@ struct gamedata {
 
 //Functions:
 
+//Local server, for testing purposes
+void *local_server(void *);
+
 //Add new message to the chat service
 char **new_message(char *, char **, int);
-
-//For debugging, prints all of the messages stored in the chat service
-void print_messages(char **, int);
 
 //Create map by allocating memory and adding walls
 char **createMap(char **, struct gamedata);
@@ -39,7 +39,7 @@ void *updateMap(void *);
 void updateGame(char *);
 
 //Get character from terminal
-char getInput(char **, int, char *);
+char getInput(char *);
 
 //Handle received character
 char *processCommand(char **, struct playerdata *, char, char *);
