@@ -1,5 +1,2 @@
-27.2.
--Combine LOCALGAME and NETGAME functionalities. There is need only for couple different lines of codes each. Main difference: AF_UNIX, AF_INET
+2.3.
 -Combination required inside processCommand() -function. Details are commented in the code
--Wait for initial state of the game -function needed
--Valgrind was getting blocked by something. No errors reported tho

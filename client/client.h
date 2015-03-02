@@ -3,22 +3,26 @@
 
 //Structs:
 
-struct playerdata {
+typedef struct playerdata {
   char name[10];
   uint8_t id;
   uint8_t x_coord;
   uint8_t y_coord;
   uint8_t hp;
-};
+  uint8_t sign;
+}Playerdata;
 
-struct gamedata {
+typedef struct gamedata {
   uint8_t player_count;
   uint8_t monster_count;
-  uint8_t map_height;
-  uint8_t map_width;
-  struct playerdata *players;
-};
+  Playerdata *players;
+}Gamedata;
 
+typedef struct mapdata {
+  uint8_t height;
+  uint8_t width;
+  char **map;
+}Mapdata;
 
 //Functions:
 
@@ -29,20 +33,24 @@ void *local_server(void *);
 char **new_message(char *, char **, int);
 
 //Create map by allocating memory and adding walls
-char **createMap(char **, struct gamedata);
+//char **createMap(char **, struct gamedata);
+char **createMap(struct mapdata *);
 
 //Update map to show current player position and monster positions
 //This is done by thread
 void *updateMap(void *);
 
-//Update game info from a string buffer
-void updateGame(char *);
+//For handling the 'G' message: create struct that contains info of all of the players and monsters
+struct playerdata *initGame(char *, Gamedata *);
+
+//For handling the 'A' message: A single action
+void updateGame(char *, struct gamedata*);
 
 //Get character from terminal
 char getInput(char *);
 
 //Handle received character
-char *processCommand(char **, struct playerdata *, char, char *);
+char *processCommand(char **, Playerdata, char, char *);
 
 //Action related:
 int attackMonster(char**, int, int);
