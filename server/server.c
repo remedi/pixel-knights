@@ -1,13 +1,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <netdb.h>
+#include <arpa/inet.h>
 
 #include "server.h"
 
-
+#define MAXDATASIZE 128
 #define PORT "4375"
 #define BACKLOG 10
 
@@ -17,6 +19,10 @@ int main(void) {
     struct sockaddr_storage their_addr;
     socklen_t socklen = sizeof(struct sockaddr);
     int status, sockfd, new_fd, yes = 1;
+    char recvbuf[MAXDATASIZE];
+    char sendbuf[MAXDATASIZE];
+    char ipstr[INET_ADDRSTRLEN];
+    ssize_t nbytes; 
 
     memset(&hints, 0, sizeof(struct addrinfo));
     hints.ai_family = AF_INET;
@@ -51,6 +57,8 @@ int main(void) {
         exit(EXIT_FAILURE);
     }
 
+    inet_ntop(i->ai_family, &((struct sockaddr_in*)i->ai_addr)->sin_addr, ipstr, INET_ADDRSTRLEN);
+
     // We don't need this anymore
     freeaddrinfo(results);
 
@@ -60,7 +68,7 @@ int main(void) {
         exit(EXIT_FAILURE);
     }
 
-    printf("Waiting for connections...\n");
+    printf("Server initialized!\nServer IP: %s\nWaiting for connections...\n", ipstr);
 
     while(1) {
 
@@ -70,9 +78,46 @@ int main(void) {
             continue;
         }
 
-        printf("New connection accepted!\n");
+        // Receive next message from the client
+        if ((nbytes = recv(new_fd, recvbuf, MAXDATASIZE-1, 0)) == -1) {
+            perror("recv error");
+            close(new_fd);
+            continue;
+        }
+        recvbuf[nbytes] = '\0';
+        printf("%s", recvbuf);
+
+        // If the message starts with H the message is a Hello-message
+        if (!strncmp(recvbuf, "H", 1)) {
+            if ((nbytes = send(new_fd, "Hello!\n", 7, 0)) == -1) {
+                perror("send error");
+                close(new_fd);
+                continue;
+            }
+        }
+        
+        // If the message starts with C the message is a Chat-message
+        else if (!strncmp(recvbuf, "C", 1)) {
+            snprintf(sendbuf, nbytes+6, "ECHO: %s", recvbuf);
+            if ((nbytes = send(new_fd, sendbuf, nbytes+6, 0)) == -1) {
+                perror("send error");
+                close(new_fd);
+                continue;
+            }
+        }
+        else if (!strncmp(recvbuf, "Q", 1)) {
+            if ((nbytes = send(new_fd, "Bye!\n", 5, 0)) == -1) {
+                perror("send error");
+                close(new_fd);
+                continue;
+            }
+            close(new_fd);
+            break;
+        }
+
+        close(new_fd);
     }
 
-    printf("Test hello\n");
+    printf("Exiting...\n");
     return 0;
 }
