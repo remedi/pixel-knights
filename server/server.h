@@ -1,3 +1,6 @@
+#ifndef SERVER_H
+#define SERVER_H
+
 #include <stdint.h>
 #include <stdio.h>
 
@@ -50,3 +53,5 @@ ID negotiateID(int);
 
 // Load map data to server
 int loadMap(FILE*);
+
+#endif
