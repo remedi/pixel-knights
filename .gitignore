@@ -1,4 +1,5 @@
 *.o
 *.gch
-server
-client
+*.swp
+server/server
+client/client
