@@ -1,29 +1,9 @@
 #ifndef SERVER_H
 #define SERVER_H
 
-#include <stdint.h>
 #include <stdio.h>
 
-#include "gamestate.h"
-
-// ID is 8 bits long unsigned identifier
-typedef uint8_t ID;
-
-// Action enumeration
-typedef enum {
-	UP,
-	DOWN,
-	RIGHT,
-	LEFT,
-	ATTACK,
-	SHOOT
-} Action;
-
-// Coordinate struct
-typedef struct coodinate_s {
-	uint8_t x;
-	uint8_t y;
-} Coord;
+#include "typedefs.h"
 
 // Send the game state to the clients
 int sendGameState(void);

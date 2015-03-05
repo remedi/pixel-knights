@@ -1,18 +1,7 @@
 #ifndef GAMESTATE_H
 #define GAMESTATE_H
 
-#include "server.h"
-
-// Forward declaration and typedef of gamestate_s
-typedef struct gamestate_s Gamestate;
-
-// Gamedata structure is a linked list
-struct gamestate_s {
-	ID id;
-    Coord c;
-    char sign;
-	Gamestate* next;
-};
+#include "typedefs.h"
 
 // Adds player to the gamestate linked-list
 int addPlayer(Gamestate*, ID, Coord, char);
