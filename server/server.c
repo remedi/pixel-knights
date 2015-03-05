@@ -1,3 +1,8 @@
+// This is the Pixel Knights server
+//
+// Authors: Pixel Knights
+// Date: 5.3.2015
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

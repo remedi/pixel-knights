@@ -4,6 +4,7 @@
 // Date: 4.2.2015
 
 #include <stdlib.h>
+#include <stdio.h>
 
 #include "gamestate.h"
 
@@ -23,6 +24,7 @@ int addPlayer(Gamestate* g, ID id, Coord c, char sign) {
     player->id = id;
     player->c = c;
     player->sign = sign;
+    player->next = NULL;
     g->next = player;
 
     return 0;
@@ -111,10 +113,18 @@ int printPlayers(Gamestate* g) {
     if (!g)
         return -1;
 
+    // Linked-list is empty
+    if (g->next == NULL)
+        return -2;
+
+    // First element does not contain player
+    g = g->next;
+    printf("Current players:\n");
     while (g != NULL) {
-        printf("%02x: (%02x,%02x) - %c\n", g->id, g->c.x, g->c.y, g->sign);
+        printf("%02x: (%hu,%hu) - %c\n", g->id, g->c.x, g->c.y, g->sign);
         g = g->next;
     }
+    printf("\n");
 
     // Done
     return 0;    
