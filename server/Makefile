@@ -1,13 +1,22 @@
 CC=gcc
-CFLAGS=-std=gnu11 -Wall -Wextra -pedantic
+CFLAGS=-std=gnu99 -Wall -Wextra -pedantic
 
 default: server
 
-server.o: server.c
-	$(CC) $(CFLAGS) -o server.o -c server.c
+server: server.o gamestate.o
+	$(CC) $(CFLAGS) -o server server.o gamestate.o
 
-server: server.o
-	$(CC) $(CFLAGS) -o server server.o
+test: test.o gamestate.o
+	$(CC) $(CFLAGS) -o test test.o gamestate.o
+
+server.o: server.c
+	$(CC) $(CFLAGS) -c -o server.o server.c
+
+gamestate.o: gamestate.c
+	$(CC) $(CFLAGS) -c -o gamestate.o gamestate.c
+
+test.o: test.c
+	$(CC) $(CFLAGS) -c -o test.o test.c
 
 clean:
-	$(RM) server *.o
+	$(RM) server test *.o
