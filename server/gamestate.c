@@ -121,7 +121,7 @@ int printPlayers(Gamestate* g) {
     g = g->next;
     printf("Current players:\n");
     while (g != NULL) {
-        printf("%02x: (%hu,%hu) - %c\n", g->id, g->c.x, g->c.y, g->sign);
+        printf("%02x: (%hhu,%hhu) - %c\n", g->id, g->c.x, g->c.y, g->sign);
         g = g->next;
     }
     printf("\n");

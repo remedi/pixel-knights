@@ -5,6 +5,9 @@
 
 #include "typedefs.h"
 
+// Returns the maximum of a and b
+int max(int, int);
+
 // Send the game state to the clients
 int sendGameState(void);
 
@@ -20,8 +23,8 @@ int relayChatMessage(char*, unsigned int);
 // Listen for new connections
 int listenNewConnections(void);
 
-// Perform id negotiation on new connection
-ID negotiateID(int);
+// Create new ID for new client connection
+ID createID(void);
 
 // Load map data to server
 int loadMap(FILE*);
