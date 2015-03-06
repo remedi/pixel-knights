@@ -3,11 +3,14 @@ CFLAGS=-std=gnu99 -Wall -Wextra -pedantic
 
 default: server
 
-server: server.o gamestate.o
-	$(CC) $(CFLAGS) -o server server.o gamestate.o
+server: server.o gamestate.o main.o
+	$(CC) $(CFLAGS) -o server server.o gamestate.o main.o
 
 test: test.o gamestate.o
 	$(CC) $(CFLAGS) -o test test.o gamestate.o
+
+main.o: main.c
+	$(CC) $(CFLAGS) -c -o main.o main.c
 
 server.o: server.c
 	$(CC) $(CFLAGS) -c -o server.o server.c
