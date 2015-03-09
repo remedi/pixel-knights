@@ -82,6 +82,10 @@ char getInput(char *buffer) {
 //Check if anything occupies the given coordinates.
 //Return 0 for nothing, 1 for wall, 2 for monster, 3 for player
 char checkCoord(char **map, Gamedata gamedata, int x, int y) {
+    if(x < 1 || y < 1) {
+	printf("Sanity check failed: Unaccepted pair of coordinates at checkCoord. x: %d y: %d\n", x, y);
+	return -1;
+    }
     int player_count = gamedata.player_count;
     int i;
     Playerdata *players = gamedata.players;
@@ -156,7 +160,7 @@ char **createMap(Mapdata *map_data) {
     rows = realloc(rows, sizeof(char **) * height);
     if(rows == NULL) {
 	perror("drawMap, malloc");
-	free(rows);
+	//free(rows);
 	free(old_ptr);
 	return NULL;
     }
@@ -195,10 +199,14 @@ Playerdata *initGame(char *buf, Gamedata *game_data, Mapdata map_data) {
     Playerdata *players = game_data->players;
     Playerdata *old_ptr = players;
     game_data->player_count = *buf;
+    if(game_data->player_count < 1) {
+	printf("Sanity check failed: player_count was: %d\n", game_data->player_count);
+	return NULL;
+    }
     buf++;
     players = realloc(players, game_data->player_count * sizeof(Playerdata));
     if(players == NULL) {
-	free(players);
+	//free(players);
 	free(old_ptr);
 	perror("realloc");
 	return NULL;
@@ -376,8 +384,8 @@ void *updateMap(void *arg) {
 	    buf--;
 	}
 	else if(buf[0] == 'A') {
-	    if(strlen(buf) != 4) {
-		printf("A message failed sanity check. Incorrect message length: %lu\n", strlen(buf));
+	    if(bytes != 4) {
+		printf("A message failed sanity check. Incorrect message length: %lu\n", bytes);
 		memset(buf, '\0', BUFLEN);
 		continue;
 	    }
@@ -386,8 +394,8 @@ void *updateMap(void *arg) {
 	    memset(buf, '\0', BUFLEN);
 	}
 	else if(buf[0] == 'G') {
-	    if((strlen(buf)-2)%4 != 0) {
-		printf("G message failed sanity check. Incorrect message length: %lu\n", strlen(buf));
+	    if( (bytes - 2) % 4 != 0) {
+		printf("G message failed sanity check. Unaccepted message length: %lu\n", bytes);
 		memset(buf, '\0', BUFLEN);
 		continue;
 	    }
@@ -453,7 +461,7 @@ int main(int argc, char *argv[]) {
     int sock;
     //struct stat buf;
     Mapdata map_data;
-
+ 
     if(argc == 1) {
 	printf("-----------------\n");
 	printf("No arguments given, defaulting to localgame\n");
@@ -605,7 +613,7 @@ int main(int argc, char *argv[]) {
 	global_my_player.id = buffer[1];
     }
     else {
-	printf("Unexpected response from server: %s\n", buffer);
+	printf("Unexpected message type from server: %c\n", buffer[0]);
     }
 
     //Start the thread
