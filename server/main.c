@@ -178,10 +178,10 @@ int main(void) {
                     if (!strncmp(recvbuf, "H", 1)) {
                         ID id = createID();
                         Coord c;
-                        c.x = 0;
-                        c.y = 0;
-                        addPlayer(&game, id, c, '#');
-                        sprintf(sendbuf, "Hello %hhu\n", id);
+                        c.x = 1;
+                        c.y = 1;
+                        addPlayer(&game, id, c, 'U');
+                        sprintf(sendbuf, "I%hhu\n", id);
                         if ((nbytes = send(i, sendbuf, strlen(sendbuf)+1, 0)) == -1) {
                             perror("send error");
                             continue;
