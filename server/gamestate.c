@@ -5,6 +5,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "gamestate.h"
 
@@ -49,6 +50,22 @@ Gamestate* findPlayer(Gamestate* g, ID id) {
         return NULL;
 
     return g;
+}
+
+// Gets the amount of players in Gamestate
+uint8_t getSize(Gamestate* g) {
+
+    uint8_t size = 0;
+
+    // First element does not contain player
+    g = g->next;
+
+    // Iterate all the elements
+    while (g != NULL) {
+        size++;
+        g = g->next;
+    }
+    return size;
 }
 
 // Moves plyer to the destination Coord
@@ -107,6 +124,7 @@ int removePlayer(Gamestate* g, ID id) {
     return -2;
 }
 
+// Print for debugging purposes
 int printPlayers(Gamestate* g) {
 
     // If gamestate NULL
@@ -128,4 +146,44 @@ int printPlayers(Gamestate* g) {
 
     // Done
     return 0;    
+}
+
+// Parses the string that gets sent to the players
+int parseGamestate(Gamestate* g, void* s, int len) {
+
+    uint8_t* data = s;
+
+    // Index for memory iteration
+    int i = 2;
+
+    // If gamestate NULL
+    if (!g)
+        return -1;
+
+    // Linked list is empty
+    if (g->next == NULL)
+        return -2;
+
+    // First element does not contain player
+    g = g->next;
+
+    // The message format starts with a G and player amount
+    data[0] = 0x47; // ASCII G
+    data[1] = getSize(g);
+
+    while (g != NULL) {
+
+        // Not enough memory
+        if (i + 4 > len)
+            return -3;
+
+        // Copy from struct gamestate
+        memcpy(data + i, g, 4);
+        i += 4;
+
+        g = g->next;
+    }
+
+    // Done
+    return i;
 }
