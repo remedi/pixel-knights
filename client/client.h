@@ -41,27 +41,18 @@ char **createMap(struct mapdata *);
 void *updateMap(void *);
 
 //For handling the 'G' message: create struct that contains info of all of the players and monsters
-struct playerdata *initGame(char *, Gamedata *);
+struct playerdata *initGame(char *, Gamedata *, Mapdata);
 
 //For handling the 'A' message: A single action
-void updateGame(char *, struct gamedata*);
+void updateGame(char *, Gamedata *);
 
 //Get character from terminal
 char getInput(char *);
 
 //Handle received character
-char *processCommand(char **, Playerdata, char, char *);
+char *processCommand(char **, Playerdata, Gamedata, char, char *);
 
-//Action related:
-int attackMonster(char**, int, int);
-int checkWall(char **, int, int);
-int makeAMove(char **, int, int);
-
-//NOT USED
-//Read data from server
-int readServer();
-
-//Send data to server
-int writeServer();
+//Check coordinates. Return 0 for empty, 1 for wall, 2 for monster, 3 for another player
+char checkCoord(char **, Gamedata, int, int);
 
 #endif
