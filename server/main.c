@@ -13,6 +13,7 @@
 #include <arpa/inet.h>
 
 #include "server.h"
+#include "gamestate.h"
 
 #define MAXDATASIZE 128
 #define PORT "4375"
@@ -20,16 +21,23 @@
 
 int main(void) {
 
+    // Declare variables
     struct addrinfo* results, hints, *i;
     struct sockaddr_storage their_addr;
+    struct timeval tv;
     socklen_t socklen = sizeof(struct sockaddr);
     int status, listenfd, new_fd, fdmax, yes = 1;
     fd_set rdset, master;
     char recvbuf[MAXDATASIZE];
-    char sendbuf[MAXDATASIZE];
+    char* sendbuf = malloc(MAXDATASIZE * sizeof(char));
     char ipstr[INET_ADDRSTRLEN];
     ssize_t nbytes; 
 
+    // Initialize game state
+    Gamestate game;
+    memset(&game, 0, sizeof(Gamestate));
+
+    // Initialize hints struct for getaddrinfo
     memset(&hints, 0, sizeof(struct addrinfo));
     hints.ai_family = AF_INET;
     hints.ai_socktype = SOCK_STREAM;
@@ -77,6 +85,10 @@ int main(void) {
     // Set the maximum value of fd
     fdmax = listenfd;
 
+    // Clear the sets
+    FD_ZERO(&master);
+    FD_ZERO(&rdset);
+
     // Set the listen socket to the master set
     FD_SET(listenfd, &master);
 
@@ -87,14 +99,43 @@ int main(void) {
         // Copy the master set to read set
         rdset = master;
 
+        // Re-initialize select timeout
+        memset(&tv, 0, sizeof(struct timeval));
+        tv.tv_sec = 5;
+        tv.tv_usec = 0;
+
         // Select the descriptors that are ready for reading
-        if ((status = select(fdmax + 1, &rdset, NULL, NULL, NULL)) == -1) {
+        if ((status = select(fdmax + 1, &rdset, NULL, NULL, &tv)) == -1) {
             perror("select error");
             exit(EXIT_FAILURE);
         }
-        else if (!status)
-            continue;
-        
+
+        // Timeout happened
+        else if (!status) {
+
+            // Clear the send buffer
+            memset(sendbuf, 0, MAXDATASIZE);
+
+            // Parse game state message
+            if ((status = parseGamestate(&game, sendbuf, MAXDATASIZE)) < 0)
+                continue;
+
+            // TODO: Make this in separate thread
+            for (int i = 0; i <= fdmax; i++) {
+
+                // Check that the fd is a client
+                if (i == listenfd)
+                    continue;
+                if (FD_ISSET(i, &master)) {
+                    // Send game state to every client
+                    if ((nbytes = send(i, sendbuf, status, 0)) == -1) {
+                        perror("send error");
+                        continue;
+                    }
+                }
+            }
+        }
+
         // If the listen socket is ready for reading; new connection has arrived
         if (FD_ISSET(listenfd, &rdset)) {
 
@@ -129,20 +170,24 @@ int main(void) {
                         perror("recv error");
                         continue;
                     }
-                    
+
                     recvbuf[nbytes] = '\0';
                     printf("%s", recvbuf);
 
                     // If the message starts with H the message is a Hello-message
                     if (!strncmp(recvbuf, "H", 1)) {
                         ID id = createID();
+                        Coord c;
+                        c.x = 0;
+                        c.y = 0;
+                        addPlayer(&game, id, c, '#');
                         sprintf(sendbuf, "Hello %hhu\n", id);
                         if ((nbytes = send(i, sendbuf, strlen(sendbuf)+1, 0)) == -1) {
                             perror("send error");
                             continue;
                         }
                     }
-                    
+
                     // If the message starts with C the message is a Chat-message
                     else if (!strncmp(recvbuf, "C", 1)) {
                         snprintf(sendbuf, nbytes+7, "ECHO: %s\n", recvbuf);
@@ -164,6 +209,7 @@ int main(void) {
                     }
                     // Just to be able to remotely close the server...
                     else if (!strncmp(recvbuf, "KILL", 4)) {
+                        free(sendbuf);
                         printf("Exiting...\n");
                         return 0;
                     }

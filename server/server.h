@@ -8,9 +8,6 @@
 // Returns the maximum of a and b
 int max(int, int);
 
-// Send the game state to the clients
-int sendGameState(void);
-
 // Receive Action enum from client
 Action receiveAction(unsigned int);
 

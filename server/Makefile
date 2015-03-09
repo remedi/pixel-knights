@@ -3,6 +3,9 @@ CFLAGS=-std=gnu99 -Wall -Wextra -pedantic
 
 default: server
 
+debug: server.c gamestate.c main.c
+	$(CC) $(CFLAGS) -o server -g server.c gamestate.c main.c
+
 server: server.o gamestate.o main.o
 	$(CC) $(CFLAGS) -o server server.o gamestate.o main.o
 
@@ -22,4 +25,4 @@ test.o: test.c
 	$(CC) $(CFLAGS) -c -o test.o test.c
 
 clean:
-	$(RM) server test *.o
+	$(RM) server test *.o *.gch
