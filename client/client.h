@@ -26,19 +26,12 @@ typedef struct mapdata {
 
 //Functions:
 
-//Local server, for testing purposes
-void *local_server(void *);
-
 //Add new message to the chat service
 char **new_message(char *, char **, int);
 
 //Create map by allocating memory and adding walls
 //char **createMap(char **, struct gamedata);
 char **createMap(struct mapdata *);
-
-//Update map to show current player position and monster positions
-//This is done by thread
-void *updateMap(void *);
 
 //For handling the 'G' message: create struct that contains info of all of the players and monsters
 struct playerdata *initGame(char *, Gamedata *, Mapdata);
@@ -54,5 +47,16 @@ char *processCommand(char **, Playerdata, Gamedata, char, char *);
 
 //Check coordinates. Return 0 for empty, 1 for wall, 2 for monster, 3 for another player
 char checkCoord(char **, Gamedata, int, int);
+
+//Thread related functions:
+//Update map to show current player position and monster positions
+void *updateMap(void *);
+
+//Local server, for testing purposes
+void *local_server(void *);
+
+//Cleanup handler for freeing memory
+
+void *free_memory(void *);
 
 #endif
