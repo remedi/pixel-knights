@@ -35,6 +35,7 @@ char **global_map = NULL;
 Playerdata global_my_player;
 //Game data:
 Gamedata global_game;
+int glob_i = 0;
 
 
 //Add the new message contained in buf to the msg_array. Also rotate pointers to make the newest message show as first.
@@ -105,10 +106,10 @@ char checkCoord(char **map, Gamedata gamedata, int x, int y) {
 }
 
 //Process character read from terminal. Return a character string that is send to the server afterwads.
-char *processCommand(char **map, Playerdata player, Gamedata gamedata, char input, char *buf) {
-    char x = player.x_coord;
-    char y = player.y_coord;
-    char player_id = player.id;
+char *processCommand(char **map, Playerdata own_data, Gamedata gamedata, char input, char *buf) {
+    char x = own_data.x_coord;
+    char y = own_data.y_coord;
+    //char player_id = own_data.id;
     memset(buf, '\0', BUFLEN);
     switch(input) {
     case 'w':
@@ -124,13 +125,17 @@ char *processCommand(char **map, Playerdata player, Gamedata gamedata, char inpu
 	x++;
 	break;
     default:
+	//F indicates 'Fail', not a valid command:
+	buf[0] = 'F';
 	return buf;
 	break;
     }
     if(checkCoord(map, gamedata, x, y) == 0) {
-	sprintf(buf, "A%c%c%c", player_id, x, y);
+	sprintf(buf, "A%c%c%c", own_data.id, x, y);
 	return buf;
     }
+    // B indicates action was blocked
+    buf[0] = 'B';
     return buf;
 }
 
@@ -263,7 +268,7 @@ void *local_server(void *arg) {
     socklen_t client_addr_len;
     char *buf = malloc(BUFLEN);
     char *id_msg = "I\005";
-    char *game_msg = "G\001\005\001\001U";
+    char *game_msg = "G\003\005\001\001U\006\002\002P\007\002\003R";
 
     memset(buf, '\0', BUFLEN);
     pthread_cleanup_push(free_memory, buf);
@@ -347,7 +352,7 @@ void *updateMap(void *arg) {
 	}
 	if(buf[0] == 'u') {
 	    //Draw map again
-	    printf("thread: Got local u message\n");
+	    printf("thread: Got local u message. This message is currently NOT USED\n");
 	}
 	else if(buf[0] == 'C') {
 	    printf("thread: Got C message\n");
@@ -407,7 +412,6 @@ void *updateMap(void *arg) {
 	}
 
 	printf("DEBUG: Drawing loop: %d\n", j);
-	printf("HELP: Movement: \"wasd\" Quit: \"0\" or \"q\" Chat: \"c\"\n");
 	j++;
 	memset(buf, '\0', BUFLEN);
         pthread_cleanup_pop(0);
@@ -421,7 +425,7 @@ void *updateMap(void *arg) {
 
 //Frees memory pointed by 'ptr'. Used as thread cleanup handler
 void *free_memory(void *ptr) {
-    printf("thread: freeing my memory\n");
+    printf("thread: Freeing my memory\n");
     free(ptr);
     return NULL;
 }
@@ -439,7 +443,6 @@ int main(int argc, char *argv[]) {
     struct termios save_term, conf_term;
     char **message_array;
     int message_count;
-    int new_term_settings;
     int sock;
     Mapdata map_data;
     int exit_clean = 0;
@@ -459,6 +462,8 @@ int main(int argc, char *argv[]) {
 	if(fgets(global_my_player.name, 10, stdin) == NULL) {
 	    perror("fgets");
 	}
+	//Remove last newline:
+	global_my_player.name[strlen(global_my_player.name)-1] = '\0';
 	global_gametype = NETGAME;
     }
     else {
@@ -492,8 +497,7 @@ int main(int argc, char *argv[]) {
 	perror("tcgetattr");
     }
     conf_term = save_term;
-    new_term_settings = ICANON;
-    conf_term.c_lflag = (conf_term.c_lflag & ~new_term_settings);
+    conf_term.c_lflag = (conf_term.c_lflag & ~ICANON);
     //Set new settings
     if(tcsetattr(STDIN_FILENO, TCSANOW, &conf_term) == -1) {
 	perror("main, tcsetattr");
@@ -504,15 +508,14 @@ int main(int argc, char *argv[]) {
 	perror("main, tcgetattr");
     }
     else {
-	if((conf_term.c_lflag & new_term_settings) == 0) {
+	if((conf_term.c_lflag & ICANON) == 0) {
 	    printf("main: Terminal settings succesfully changed\n");
 	}
 	else {
-	    printf("main: Error with term settings: Had: %d Wanted to add: %d. Bitwise: %d\n", conf_term.c_lflag, new_term_settings, (conf_term.c_lflag & new_term_settings));
+	    printf("main: Error with term settings: Had: %d Wanted to add: %d. Bitwise: %d\n", conf_term.c_lflag, ICANON, (conf_term.c_lflag & ICANON));
 	    exit(-1);
 	}
     }
-
 
     //Create map
     global_map = createMap(&map_data);
@@ -612,11 +615,31 @@ int main(int argc, char *argv[]) {
 	else if(input_char == 'q' || input_char == '0') {
 	    break;
 	}
+	else if(input_char == 'x') {
+	    global_my_player.id = global_game.players[glob_i].id;
+	    global_my_player.x_coord = global_game.players[glob_i].x_coord;
+	    global_my_player.y_coord = global_game.players[glob_i].y_coord;
+	    global_my_player.sign = global_game.players[glob_i].sign;
+	    printf("main: Controlling now player: sign: %c id: %d x: %d y: %d\n", global_my_player.sign, global_my_player.id, global_my_player.x_coord, global_my_player.y_coord);
+	    glob_i++;
+	    if(glob_i == global_game.player_count) {
+		glob_i = 0;
+	    }
+	    continue;
+	}
 	memset(buffer, '\0', BUFLEN);
 	processCommand(global_map, global_my_player, global_game, input_char, buffer);
-	if(strlen(buffer) == 0) {
-	    printf("Not valid command!\n");
-	    write(sock, "u", 1);
+	if(buffer[0] == 'F') {
+	    //printf("Not valid command!\n");
+	    //write(sock, "u", 1);
+            printf("HELP: Movement: \"wasd\" Quit: \"0\" or \"q\" Chat: \"c\" Change player: \"x\"\n");
+	    continue;
+	}
+	else if(buffer[0] == 'B') {
+	    printf("Action not possible\n");
+	    continue;
+	}
+	else if(strlen(buffer) == 0) {
 	    continue;
 	}
 	printf("main: Wrote ");
