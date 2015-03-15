@@ -342,9 +342,11 @@ void *updateMap(void *arg) {
 
     printf("thread: Reading socket %d\n", sock_t);
     while(1) {
+	//This cleanup handler needs to be set again for each loop, in case the address of 'players' is changed.
         pthread_cleanup_push(free_memory, players);
 	bytes = read(sock_t, buf, BUFLEN);
 	if(bytes <= 0) {
+	    perror("read");
 	    continue;
 	}
 	else {
@@ -411,7 +413,7 @@ void *updateMap(void *arg) {
 	    global_map[y][x] = ' ';
 	}
 
-	printf("DEBUG: Drawing loop: %d\n", j);
+	printf("DEBUG: Drawing loop: %d\n\n", j);
 	j++;
 	memset(buf, '\0', BUFLEN);
         pthread_cleanup_pop(0);
@@ -613,6 +615,7 @@ int main(int argc, char *argv[]) {
 	    continue;
 	}
 	else if(input_char == 'q' || input_char == '0') {
+	    write(sock, "Q", 1);
 	    break;
 	}
 	else if(input_char == 'x') {
@@ -620,11 +623,19 @@ int main(int argc, char *argv[]) {
 	    global_my_player.x_coord = global_game.players[glob_i].x_coord;
 	    global_my_player.y_coord = global_game.players[glob_i].y_coord;
 	    global_my_player.sign = global_game.players[glob_i].sign;
-	    printf("main: Controlling now player: sign: %c id: %d x: %d y: %d\n", global_my_player.sign, global_my_player.id, global_my_player.x_coord, global_my_player.y_coord);
+	    printf("main: Controlling now player %d: sign: %c id: %d x: %d y: %d\n", glob_i, global_my_player.sign, global_my_player.id, global_my_player.x_coord, global_my_player.y_coord);
 	    glob_i++;
 	    if(glob_i == global_game.player_count) {
 		glob_i = 0;
 	    }
+	    else if(global_game.player_count == 0) {
+		printf("Sanity check fail: Player count is 0\n");
+	    }
+	    continue;
+	}
+	else if(input_char == 'z') {
+	    printf("Game info: Character under control: sign: %c id: %d x: %d y: %d\n", global_my_player.sign, global_my_player.id, global_my_player.x_coord, global_my_player.y_coord);
+	    printf("Game info: Player count: %d Map width: %d Map height: %d\n", global_game.player_count, global_map_data.width, global_map_data.height);
 	    continue;
 	}
 	memset(buffer, '\0', BUFLEN);
@@ -632,7 +643,8 @@ int main(int argc, char *argv[]) {
 	if(buffer[0] == 'F') {
 	    //printf("Not valid command!\n");
 	    //write(sock, "u", 1);
-            printf("HELP: Movement: \"wasd\" Quit: \"0\" or \"q\" Chat: \"c\" Change player: \"x\"\n");
+            printf("HELP: Movement: \"wasd\" Quit: \"0\" or \"q\" Chat: \"c\"\n");
+	    printf("DEBUG: Change player: \"x\" Game info: \"z\"\n");
 	    continue;
 	}
 	else if(buffer[0] == 'B') {
