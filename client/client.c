@@ -205,16 +205,16 @@ Playerdata *initGame(char *buf, Gamedata *game_data, Mapdata map_data) {
         buf++;
         players[i].x_coord = *buf;
         if(players[i].x_coord > width || players[i].x_coord < 1) {
-            printf("thread: G message failed sanity check. Player coordinates extend beyond map\n");
-            free(players);
-            return NULL;
+            printf("thread: G message failed sanity check. Player coordinates extend beyond map. X: %d\n", *buf);
+            /*free(players);
+	      return NULL;*/
         }
         buf++;
         players[i].y_coord = *buf;
         if(players[i].y_coord > height || players[i].y_coord < 1) {
-            printf("thread: G message failed sanity check. Player coordinates extend beyond map\n");
-            free(players);
-            return NULL;
+            printf("thread: G message failed sanity check. Player coordinates extend beyond map. Y: %d\n", *buf);
+            /*free(players);
+	      return NULL;*/
         }
         buf++;
         players[i].sign = *buf;
@@ -288,10 +288,14 @@ void *updateMap(void *arg) {
         //This cleanup handler needs to be set again for each loop, in case the address of 'players' is changed.
         pthread_cleanup_push(free_memory, players);
         bytes = read(sock_t, buf, BUFLEN);
-        if(bytes <= 0) {
+        if(bytes < 0) {
             perror("read");
             continue;
         }
+	else if(bytes == 0) {
+	    printf("thread: Server likely disconnected\n");
+	    sleep(3);
+	}
         else {
             printf("thread: Read %lu bytes from a socket: %d\n", bytes, sock_t);
         }
@@ -449,7 +453,7 @@ int main(int argc, char *argv[]) {
             printf("main: Terminal settings succesfully changed\n");
         }
         else {
-            printf("main: Error with term settings: Had: %lu Wanted to add: %d. Bitwise: %lu\n", conf_term.c_lflag, ICANON, (conf_term.c_lflag & ICANON));
+            //printf("main: Error with term settings: Had: %lu Wanted to add: %d. Bitwise: %lu\n", conf_term.c_lflag, ICANON, (conf_term.c_lflag & ICANON));
             exit(-1);
         }
     }
@@ -560,7 +564,7 @@ int main(int argc, char *argv[]) {
             global_my_player.sign = global_game.players[glob_i].sign;
             printf("main: Controlling now player %d: sign: %c id: %d x: %d y: %d\n", glob_i, global_my_player.sign, global_my_player.id, global_my_player.x_coord, global_my_player.y_coord);
             glob_i++;
-            if(glob_i == global_game.player_count) {
+            if(glob_i >= global_game.player_count) {
                 glob_i = 0;
             }
             else if(global_game.player_count == 0) {
@@ -643,7 +647,7 @@ int main(int argc, char *argv[]) {
         printf("main: Old terminal settings succesfully restored\n");
     }
     else {
-        printf("main: Error restoring terminal settings. Old: %lu New: %lu\n", save_term.c_lflag, conf_term.c_lflag);
+        //printf("main: Error restoring terminal settings. Old: %lu New: %lu\n", save_term.c_lflag, conf_term.c_lflag);
     }
 
     printf("main: Cleanup done, exiting\n");

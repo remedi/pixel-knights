@@ -24,6 +24,15 @@ typedef struct mapdata {
   char **map;
 }Mapdata;
 
+typedef enum {
+	UP,
+	DOWN,
+	RIGHT,
+	LEFT,
+	ATTACK,
+	SHOOT
+} Action;
+
 //Functions:
 
 //Add new message to the chat service
