@@ -210,8 +210,9 @@ int main(void) {
                             fprintf(stderr, "addPlayer: ID conflict\n");
                             continue;
                         }
-                        sprintf(sendbuf, "I%hhu\n", id);
-                        if ((nbytes = send(i, sendbuf, strlen(sendbuf)+1, 0)) == -1) {
+                        sendbuf[0] = 'I';
+                        memcpy(sendbuf + 1, &id, 1);
+                        if ((nbytes = send(i, sendbuf, 2, 0)) == -1) {
                             perror("send error");
                             continue;
                         }
