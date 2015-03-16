@@ -55,8 +55,4 @@ void *updateMap(void *);
 //Local server, for testing purposes
 void *local_server(void *);
 
-//Cleanup handler for freeing memory
-
-void *free_memory(void *);
-
 #endif
