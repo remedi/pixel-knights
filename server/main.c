@@ -36,6 +36,9 @@ int main(void) {
     // Initialize game state
     Gamestate game;
     memset(&game, 0, sizeof(Gamestate));
+    ID id;
+    Coord c;
+    uint8_t* data;
 
     // Initialize hints struct for getaddrinfo
     memset(&hints, 0, sizeof(struct addrinfo));
@@ -174,13 +177,39 @@ int main(void) {
                     recvbuf[nbytes] = '\0';
                     printf("%s", recvbuf);
 
+                    // If the message starts with A the message is an Action message
+                    if (!strncmp(recvbuf, "A", 1)) {
+
+                        // Action message must be of length 4 (A + ID + x + y)
+                        if (strlen(recvbuf) != 4)
+                            continue;
+
+                        // Read ID and x,y coordinates from recvbuf
+                        data = (uint8_t*) (recvbuf + 1);
+                        id = *data;
+                        c.x = *(data + 2);
+                        c.y = *(data + 3);
+                        status = movePlayer(&game, id, c);
+                        if (status == -1)
+                            fprintf(stderr, "movePlayer: Invalid game state\n");
+                        else if (status == -2)
+                            fprintf(stderr, "movePlayer: ID not found\n");
+                    }
+
                     // If the message starts with H the message is a Hello-message
                     if (!strncmp(recvbuf, "H", 1)) {
-                        ID id = createID();
-                        Coord c;
+                        id = createID();
                         c.x = 1;
                         c.y = 1;
-                        addPlayer(&game, id, c, 'U');
+                        status = addPlayer(&game, id, c, 'U');
+                        if (status == -1) {
+                            fprintf(stderr, "addPlayer: Invalid game state\n");
+                            continue;
+                        }
+                        else if (status == -2) {
+                            fprintf(stderr, "addPlayer: ID conflict\n");
+                            continue;
+                        }
                         sprintf(sendbuf, "I%hhu\n", id);
                         if ((nbytes = send(i, sendbuf, strlen(sendbuf)+1, 0)) == -1) {
                             perror("send error");
@@ -191,22 +220,47 @@ int main(void) {
                     // If the message starts with C the message is a Chat-message
                     else if (!strncmp(recvbuf, "C", 1)) {
                         snprintf(sendbuf, nbytes+7, "ECHO: %s\n", recvbuf);
-                        if ((nbytes = send(i, sendbuf, strlen(sendbuf)+1, 0)) == -1) {
-                            perror("send error");
-                            continue;
+
+                        // Broadcast the chat message to all sockets
+                        for (int i = 0; i <= fdmax; i++) {
+                            if (i == listenfd)
+                                continue;
+                            if (FD_ISSET(i, &master)) {
+                                if ((nbytes = send(i, sendbuf, strlen(sendbuf)+1, 0)) == -1) {
+                                    perror("send error");
+                                    continue;
+                                }
+                            }
                         }
                     }
-                    // Quit
+
+                    // If the message starts with Q the message is a Quit-message
                     else if (!strncmp(recvbuf, "Q", 1)) {
+
+                        // Quit message must be of length 2 (Q + ID) 
+                        if (strlen(recvbuf) != 2)
+                            continue;
+
+                        // Read ID from recvbuf and remove player
+                        data = (uint8_t*) (recvbuf + 1);
+                        status = removePlayer(&game, *data);
+                        if (status == -1)
+                            fprintf(stderr, "removePlayer: Invalid game state\n");
+                        else if (status == -2)
+                            fprintf(stderr, "removePlayer: ID not found\n");
+
+                        // Send "Bye!" to client 
                         if ((nbytes = send(i, "Bye!\n", 5, 0)) == -1) {
                             perror("send error");
                             continue;
                         }
+
                         // Clear the descriptor from the master set
                         FD_CLR(i, &master);
                         close(i);
                         break;
                     }
+
                     // Just to be able to remotely close the server...
                     else if (!strncmp(recvbuf, "KILL", 4)) {
                         free(sendbuf);
