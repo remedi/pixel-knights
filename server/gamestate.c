@@ -16,6 +16,10 @@ int addPlayer(Gamestate* g, ID id, Coord c, char sign) {
     if (!g)
         return -1;
 
+    // If ID is already in the game
+    if (findPlayer(g, id))
+        return -2;
+
     // Find the last element of linked list
     while (g->next != NULL)
         g = g->next;
@@ -164,12 +168,12 @@ int parseGamestate(Gamestate* g, void* s, int len) {
     if (g->next == NULL)
         return -2;
 
-    // First element does not contain player
-    g = g->next;
-
     // The message format starts with a G and player amount
     data[0] = 0x47; // ASCII G
     data[1] = getSize(g);
+
+    // First element does not contain player
+    g = g->next;
 
     while (g != NULL) {
 
