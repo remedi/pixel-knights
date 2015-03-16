@@ -3,9 +3,6 @@
 // Authors: Pixel Knights
 // Date: 6.3.2015
 
-#include <sys/types.h>
-#include <unistd.h>
-
 #include "server.h"
 #include "typedefs.h"
 
@@ -20,6 +17,6 @@ int max(int a, int b) {
 // Returns the ID of a new client connection
 ID createID(void) {
 
-    // TODO: This dummy always returns the same value
-    return getpid();
+    static ID id = 0x01;
+    return id++;
 }
