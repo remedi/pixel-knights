@@ -104,7 +104,7 @@ int main(void) {
 
         // Re-initialize select timeout
         memset(&tv, 0, sizeof(struct timeval));
-        tv.tv_sec = 5;
+        tv.tv_sec = 1;
         tv.tv_usec = 0;
 
         // Select the descriptors that are ready for reading
@@ -187,8 +187,8 @@ int main(void) {
                         // Read ID and x,y coordinates from recvbuf
                         data = (uint8_t*) (recvbuf + 1);
                         id = *data;
-                        c.x = *(data + 2);
-                        c.y = *(data + 3);
+                        c.x = *(data + 1);
+                        c.y = *(data + 2);
                         status = movePlayer(&game, id, c);
                         if (status == -1)
                             fprintf(stderr, "movePlayer: Invalid game state\n");
