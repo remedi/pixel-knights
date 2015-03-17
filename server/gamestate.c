@@ -10,7 +10,7 @@
 #include "gamestate.h"
 
 // Adds player to the gamestate linked-list
-int addPlayer(Gamestate* g, ID id, Coord c, char sign) {
+int addPlayer(Gamestate* g, ID id, Coord c, int sock, char sign) {
 
     // If gamestate NULL
     if (!g)
@@ -29,6 +29,7 @@ int addPlayer(Gamestate* g, ID id, Coord c, char sign) {
     player->id = id;
     player->c = c;
     player->sign = sign;
+    player->sock = sock;
     player->next = NULL;
     g->next = player;
 
@@ -157,7 +158,7 @@ int printPlayers(Gamestate* g) {
     g = g->next;
     printf("Current players:\n");
     while (g != NULL) {
-        printf("%02x: (%hhu,%hhu) - %c\n", g->id, g->c.x, g->c.y, g->sign);
+        printf("%02x: (%hhu,%hhu) - %c @ %d\n", g->id, g->c.x, g->c.y, g->sign, g->sock);
         g = g->next;
     }
     printf("\n");

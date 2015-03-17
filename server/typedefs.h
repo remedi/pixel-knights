@@ -19,7 +19,8 @@ struct gamestate_s {
 	ID id;
     Coord c;
     char sign;
-	Gamestate* next;
+    int sock;
+    Gamestate* next;
 };
 
 // Action enumeration

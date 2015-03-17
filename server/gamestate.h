@@ -6,7 +6,7 @@
 #include "typedefs.h"
 
 // Adds player to the gamestate linked-list
-int addPlayer(Gamestate*, ID, Coord, char);
+int addPlayer(Gamestate*, ID, Coord, int, char);
 
 // Finds pointer to the Gamestate struct containing ID
 Gamestate* findPlayer(Gamestate*, ID);

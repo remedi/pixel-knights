@@ -11,9 +11,11 @@
 #include <sys/types.h>
 #include <netdb.h>
 #include <arpa/inet.h>
+#include <pthread.h>
 
 #include "server.h"
 #include "gamestate.h"
+#include "thread.h"
 
 #define MAXDATASIZE 128
 #define PORT "4375"
@@ -32,6 +34,7 @@ int main(void) {
     char* sendbuf = malloc(MAXDATASIZE * sizeof(char));
     char ipstr[INET_ADDRSTRLEN];
     ssize_t nbytes; 
+    pthread_t gamestate_thread;
 
     // Initialize game state
     Gamestate game;
@@ -98,6 +101,18 @@ int main(void) {
 
     printf("Server initialized!\nServer IP: %s\nWaiting for connections...\n", ipstr);
 
+    // Initiate thread that keeps sending the clients the game state
+    pthread_mutex_t lock;
+    pthread_mutex_init(&lock, NULL);
+    struct context_s ctx;
+    ctx.g = &game;
+    ctx.lock = &lock;
+
+    if (pthread_create(&gamestate_thread, NULL, sendGamestate, &ctx) < 0) {
+        perror("pthread_create error");
+        exit(EXIT_FAILURE);
+    }
+
     while(1) {
 
         // Copy the master set to read set
@@ -112,32 +127,6 @@ int main(void) {
         if ((status = select(fdmax + 1, &rdset, NULL, NULL, &tv)) == -1) {
             perror("select error");
             exit(EXIT_FAILURE);
-        }
-
-        // Timeout happened
-        else if (!status) {
-
-            // Clear the send buffer
-            memset(sendbuf, 0, MAXDATASIZE);
-
-            // Parse game state message
-            if ((status = parseGamestate(&game, sendbuf, MAXDATASIZE)) < 0)
-                continue;
-
-            // TODO: Make this in separate thread
-            for (int i = 0; i <= fdmax; i++) {
-
-                // Check that the fd is a client
-                if (i == listenfd)
-                    continue;
-                if (FD_ISSET(i, &master)) {
-                    // Send game state to every client
-                    if ((nbytes = send(i, sendbuf, status, 0)) == -1) {
-                        perror("send error");
-                        continue;
-                    }
-                }
-            }
         }
 
         // If the listen socket is ready for reading; new connection has arrived
@@ -189,7 +178,12 @@ int main(void) {
                         data = (uint8_t*) (recvbuf + 1);
                         id = *data;
                         a = *(data + 1);
+
+                        // Move player and lock game state
+                        pthread_mutex_lock(&lock);
                         status = movePlayer(&game, id, a);
+                        pthread_mutex_unlock(&lock);
+
                         if (status == -1)
                             fprintf(stderr, "movePlayer: Invalid game state\n");
                         else if (status == -2)
@@ -206,7 +200,12 @@ int main(void) {
                         id = createID();
                         c.x = 1;
                         c.y = 1;
-                        status = addPlayer(&game, id, c, recvbuf[1]);
+
+                        // Add player and lock game state
+                        pthread_mutex_lock(&lock);
+                        status = addPlayer(&game, id, c, i, recvbuf[1]);
+                        pthread_mutex_unlock(&lock);
+
                         if (status == -1) {
                             fprintf(stderr, "addPlayer: Invalid game state\n");
                             continue;
@@ -249,17 +248,16 @@ int main(void) {
 
                         // Read ID from recvbuf and remove player
                         data = (uint8_t*) (recvbuf + 1);
+
+                        // Remove player and lock game state
+                        pthread_mutex_lock(&lock);
                         status = removePlayer(&game, *data);
+                        pthread_mutex_unlock(&lock);
+
                         if (status == -1)
                             fprintf(stderr, "removePlayer: Invalid game state\n");
                         else if (status == -2)
                             fprintf(stderr, "removePlayer: ID not found\n");
-
-                        // Send "Bye!" to client 
-                        if ((nbytes = send(i, "Bye!\n", 5, 0)) == -1) {
-                            perror("send error");
-                            continue;
-                        }
 
                         // Clear the descriptor from the master set
                         FD_CLR(i, &master);
@@ -270,6 +268,7 @@ int main(void) {
                     // Just to be able to remotely close the server...
                     else if (!strncmp(recvbuf, "KILL", 4)) {
                         printPlayers(&game);
+                        pthread_cancel(gamestate_thread);
                         free(sendbuf);
                         printf("Exiting...\n");
                         return 0;
