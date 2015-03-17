@@ -52,7 +52,7 @@ void updateGame(char *, Gamedata *);
 char getInput(char *);
 
 //Handle received character
-char *processCommand(char **, Playerdata, Gamedata, char, char *);
+char *processCommand(char, char, char *);
 
 //Check coordinates. Return 0 for empty, 1 for wall, 2 for monster, 3 for another player
 char checkCoord(char **, Gamedata, int, int);

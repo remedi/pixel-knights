@@ -1,11 +1,11 @@
 CC=gcc
-CFLAGS=-std=gnu99 -Wall -Wextra -pedantic
+CFLAGS=-std=gnu99 -Wall -Wextra -pedantic -g
 LFLAGS=-pthread
 
 default: client
 
 test: client.o local.o
-	$(CC) $(CFLAGS) $(LFLAGS) -g -o client client.o local.o
+	$(CC) $(CFLAGS) $(LFLAGS) -o client client.o local.o
 
 client: client.o local.o
 	$(CC) $(CFLAGS) $(LFLAGS) -o client client.o local.o
