@@ -220,7 +220,7 @@ int main(void) {
 
                     // If the message starts with C the message is a Chat-message
                     else if (!strncmp(recvbuf, "C", 1)) {
-                        snprintf(sendbuf, nbytes+7, "ECHO: %s\n", recvbuf);
+                        snprintf(sendbuf, nbytes+7, "%s", recvbuf);
 
                         // Broadcast the chat message to all sockets
                         for (int i = 0; i <= fdmax; i++) {
