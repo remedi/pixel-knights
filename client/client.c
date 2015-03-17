@@ -22,6 +22,9 @@
 #define BUFLEN 1000
 #define MSGLEN 40
 
+#define MAP_HEIGHT 10
+#define MAP_WIDTH 10
+
 /*Global variables used by thread*/
 //For chat service:
 char **global_msg_arr;
@@ -111,22 +114,21 @@ char checkCoord(char **map, Gamedata gamedata, int x, int y) {
 
 //Process character read from terminal. Return a character string that is send to the server afterwads.
 char *processCommand(char **map, Playerdata own_data, Gamedata gamedata, char input, char *buf) {
-    char x = own_data.x_coord;
-    char y = own_data.y_coord;
-    //char player_id = own_data.id;
+
+    Action a; 
     memset(buf, '\0', BUFLEN);
     switch(input) {
         case 'w':
-            y--;
+            a = UP;
             break;
         case 's':
-            y++;
+            a = DOWN;
             break;
         case 'a':
-            x--;
+            a = LEFT;
             break;
         case 'd':
-            x++;
+            a = RIGHT;
             break;
         default:
             //F indicates 'Fail', not a valid command:
@@ -134,12 +136,8 @@ char *processCommand(char **map, Playerdata own_data, Gamedata gamedata, char in
             return buf;
             break;
     }
-    if(checkCoord(map, gamedata, x, y) == 0) {
-        sprintf(buf, "A%c%c%c", own_data.id, x, y);
-        return buf;
-    }
-    // B indicates action was blocked
-    buf[0] = 'B';
+    sprintf(buf, "A%c", own_data.id);
+    memcpy(buf+2, &a, 1);
     return buf;
 }
 
@@ -147,10 +145,10 @@ char *processCommand(char **map, Playerdata own_data, Gamedata gamedata, char in
 char **createMap(Mapdata *map_data) {
     int height = map_data->height;
     int width = map_data->width;
-    char **rows = map_data->map;
     int i;
 
-    rows = malloc(sizeof(char **) * height);
+    // Allocate memory for map
+    char **rows = malloc(sizeof(char *) * height);
     if(rows == NULL) {
         perror("drawMap, malloc");
         return NULL;
@@ -158,13 +156,14 @@ char **createMap(Mapdata *map_data) {
 
     //Allocate memory for each row and set initial tiles
     for(i = 0; i<height; i++) {
-        rows[i] = malloc(sizeof(char *) * width);
+        rows[i] = malloc(sizeof(char) * width + 1);
         if(rows[i] == NULL) {
             perror("drawMap, malloc");
             free(rows);
             return NULL;
         }
-        memset(rows[i], ' ', width);
+        // Write spaces and an ending zero to each line
+        memset(rows[i], ' ', width-1);
         rows[i][width] = '\0';
     }
 
@@ -210,14 +209,14 @@ Playerdata *initGame(char *buf, Gamedata *game_data, Mapdata map_data) {
         if(players[i].x_coord > width || players[i].x_coord < 1) {
             printf("thread: G message failed sanity check. Player coordinates extend beyond map. X: %d\n", *buf);
             /*free(players);
-	      return NULL;*/
+              return NULL;*/
         }
         buf++;
         players[i].y_coord = *buf;
         if(players[i].y_coord > height || players[i].y_coord < 1) {
             printf("thread: G message failed sanity check. Player coordinates extend beyond map. Y: %d\n", *buf);
             /*free(players);
-	      return NULL;*/
+              return NULL;*/
         }
         buf++;
         players[i].sign = *buf;
@@ -232,62 +231,31 @@ Playerdata *initGame(char *buf, Gamedata *game_data, Mapdata map_data) {
     return players;
 }
 
-//This function is called when A message is received. Update one players status from a character string received from the server.
-void updateGame(char *buf, Gamedata *game_data) {
-    buf++;
-    Playerdata *players = game_data->players;
-    int j = 0;
-    int height = global_map_data.height;
-    int width = global_map_data.width;
-    while(*buf != '\0') {
-        for(j = 0; j<(int) game_data->player_count; j++) {
-            if(players[j].id == *buf) {
-                buf++;
-                players[j].x_coord = *buf;
-                if(players[j].x_coord > width || players[j].x_coord < 1) {
-                    printf("thread: A message failed sanity check. Player coordinates extend beyond map\n");
-                    return;
-                }
-                buf++;
-                players[j].y_coord = *buf;
-                if(players[j].y_coord > height || players[j].y_coord < 1) {
-                    printf("thread: A message failed sanity check. Player coordinates extend beyond map\n");
-                    return;
-                }
-                buf++;
-                if(players[j].id == global_my_player.id) {
-                    global_my_player.x_coord = players[j].x_coord;
-                    global_my_player.y_coord = players[j].y_coord;
-                }
-            }
-        }
-    }
-    return;
-}
-
 //This function is a starting point for a thread. The point of this function is to read the messages received from server. It then calls the needed functions. Finally it adds players and monsters to the map array, draws the map to terminal and then removes characters and monsters from the map array.
 void *updateMap(void *arg) {
-   
+
     // This gets rid of the unused variable warning 
     (void) arg;
-    
+
     Playerdata *players = malloc(sizeof(Playerdata));
     Mapdata *map_data = &global_map_data;
     global_game.players = players;
     uint8_t x, y;
     int height = map_data->height;
     int i, j = 0;
-    char *buf = malloc(BUFLEN);
+    char *buf = malloc(sizeof(char) * BUFLEN);
     ssize_t bytes;
     int sock_t = global_client_sock;
+    int break_flag = 1;
 
+    // Clean message buffer
     memset(buf, '\0', BUFLEN);
 
     //Cleanup handlers for thread cancellation
     pthread_cleanup_push(free_memory, buf);
 
     printf("thread: Reading socket %d\n", sock_t);
-    while(1) {
+    while(break_flag) {
         //This cleanup handler needs to be set again for each loop, in case the address of 'players' is changed.
         pthread_cleanup_push(free_memory, players);
         bytes = read(sock_t, buf, BUFLEN);
@@ -295,32 +263,20 @@ void *updateMap(void *arg) {
             perror("read");
             continue;
         }
-	else if(bytes == 0) {
-	    printf("thread: Server likely disconnected\n");
-	    sleep(3);
-	}
-        else {
-            //printf("thread: Read %lu bytes from a socket: %d\n", bytes, sock_t);
+        else if(bytes == 0) {
+            printf("thread: Server likely disconnected\n");
+            break_flag = 0;
         }
-        if(buf[0] == 'u') {
-            //Draw map again
-            printf("thread: Got local u message. This message is currently NOT USED\n");
-        }
+        /* debugging
+           else {
+           printf("thread: Read %lu bytes from a socket: %d\n", bytes, sock_t);
+           }
+         */
         else if(buf[0] == 'C') {
             printf("thread: Got C message\n");
             buf++;
             new_message(buf, global_msg_arr, global_msg_count);
             buf--;
-        }
-        else if(buf[0] == 'A') {
-            if(bytes != 4) {
-                printf("A message failed sanity check. Unaccepted message length: %lu\n", bytes);
-                memset(buf, '\0', BUFLEN);
-                continue;
-            }
-            printf("thread: Got A message\n");
-            updateGame(buf, &global_game);
-            memset(buf, '\0', BUFLEN);
         }
         else if(buf[0] == 'G') {
             if((bytes - 2) % 4 != 0) {
@@ -341,40 +297,41 @@ void *updateMap(void *arg) {
             printf("thread: Received unkown message: %c. Ignoring\n", buf[0]);
             continue;
         }
-	//Only draw map if user isn't busy doing something else
-	if(pthread_mutex_trylock(&mtx) == 0) {
-	    //system("clear");
-	    for(i = 0; i<global_game.player_count; i++) {
-		//Add players
-		x = players[i].x_coord;
-		y = players[i].y_coord;
-		global_map[y][x] = players[i].sign;
-	    }
-	    printf("\n");
-	    for(i = 0; i<height; i++) {
-		//Actual drawing
-		printf("\t%s", global_map[i]);
-		printf("\t\t%s\n", global_msg_arr[global_msg_count-i-1]);
-	    }
-	    printf("\n");
-	    for(i = 0; i<global_game.player_count; i++) {
-		//Undo changes
-		x = players[i].x_coord;
-		y = players[i].y_coord;
-		global_map[y][x] = ' ';
-	    }
 
-	    printf("DEBUG: Drawing loop: %d. Press 'h' for help\n", j);
-	    j++;
-	    pthread_mutex_unlock(&mtx);
-	}
+        //Only draw map if user isn't busy doing something else
+        if(pthread_mutex_trylock(&mtx) == 0) {
+            //system("clear");
+            for(i = 0; i<global_game.player_count; i++) {
+                //Add players
+                x = players[i].x_coord;
+                y = players[i].y_coord;
+                global_map[y][x] = players[i].sign;
+            }
+            printf("\n");
+            for(i = 0; i<height; i++) {
+                //Actual drawing
+                printf("\t%s", global_map[i]);
+                printf("\t\t%s\n", global_msg_arr[global_msg_count-i-1]);
+            }
+            printf("\n");
+            for(i = 0; i<global_game.player_count; i++) {
+                //Undo changes
+                x = players[i].x_coord;
+                y = players[i].y_coord;
+                global_map[y][x] = ' ';
+            }
+
+            printf("DEBUG: Drawing loop: %d. Press 'h' for help\n", j);
+            j++;
+            pthread_mutex_unlock(&mtx);
+        }
         memset(buf, '\0', BUFLEN);
         pthread_cleanup_pop(0);
     }
-    //Remove cleanup handlers. The code should never reach this far
+    //Remove cleanup handlers. Continue here if break_flag = 0
     pthread_cleanup_pop(1);
     free(players);
-    printf("thread: Exiting\n");
+    printf("thread: Read 0 bytes, exiting\n");
     return 0;
 }
 
@@ -435,9 +392,15 @@ int main(int argc, char *argv[]) {
         memset(message_array[i], '\0', MSGLEN);
     }
 
-    map_data.height = 10;
-    map_data.width = 10;
-    map_data.map = NULL;
+    // Initialize mapdata
+    map_data.height = MAP_HEIGHT;
+    map_data.width = MAP_WIDTH;
+    global_map = createMap(&map_data);
+    if(global_map == NULL) {
+        printf("main: createMap error");
+        exit(-1);
+    }
+    global_map_data = map_data;
 
     //Get terminal settings
     if(tcgetattr(STDIN_FILENO, &save_term) == -1) {
@@ -461,18 +424,10 @@ int main(int argc, char *argv[]) {
             printf("main: Terminal settings succesfully changed\n");
         }
         else {
-            //printf("main: Error with term settings: Had: %lu Wanted to add: %d. Bitwise: %lu\n", conf_term.c_lflag, ICANON, (conf_term.c_lflag & ICANON));
+            perror("main: Error with term setattr");
             exit(-1);
         }
     }
-
-    //Create map
-    global_map = createMap(&map_data);
-    if(global_map == NULL) {
-        printf("main: createMap error");
-        exit(-1);
-    }
-    global_map_data = map_data;
 
     //Setup socket for netgame
     if(global_gametype == NETGAME) {
@@ -492,6 +447,7 @@ int main(int argc, char *argv[]) {
             exit_clean = 1;
         }
     }
+
     //Setup socket for local testing
     else if(global_gametype == LOCALGAME) {
         printf("main: Initializing localgame\n");
@@ -536,6 +492,7 @@ int main(int argc, char *argv[]) {
     }
     else {
         printf("Unexpected message type from server: %c\n", buffer[0]);
+        exit(-1);
     }
 
     //Start the thread
@@ -562,7 +519,9 @@ int main(int argc, char *argv[]) {
             continue;
         }
         else if(input_char == 'q' || input_char == '0') {
-            write(sock, "Q", 1);
+            buffer[0] = 'Q';
+            memcpy(buffer+1, &global_my_player.id, 1);
+            write(sock, buffer, 2);
             break;
         }
         else if(input_char == 'x') {
@@ -581,22 +540,22 @@ int main(int argc, char *argv[]) {
             continue;
         }
         else if(input_char == 'z') {
-	    pthread_mutex_lock(&mtx);
+            pthread_mutex_lock(&mtx);
             printf("Game info: Character under control: sign: %c id: %d x: %d y: %d\n", global_my_player.sign, global_my_player.id, global_my_player.x_coord, global_my_player.y_coord);
             printf("Game info: Player count: %d Map width: %d Map height: %d\n", global_game.player_count, global_map_data.width, global_map_data.height);
-	    printf("Press any key to continue\n");
-	    getchar();
-	    pthread_mutex_unlock(&mtx);
+            printf("Press any key to continue\n");
+            getchar();
+            pthread_mutex_unlock(&mtx);
             continue;
         }
-	else if(input_char == 'h') {
-	    pthread_mutex_lock(&mtx);
+        else if(input_char == 'h') {
+            pthread_mutex_lock(&mtx);
             printf("HELP: Movement: \"wasd\" Quit: \"0\" or \"q\" Chat: \"c\"\n");
             printf("DEBUG: Change player: \"x\" Game info: \"z\"\n");
-	    printf("Press any key to continue\n");
-	    getchar();
-	    pthread_mutex_unlock(&mtx);
-	}
+            printf("Press any key to continue\n");
+            getchar();
+            pthread_mutex_unlock(&mtx);
+        }
         memset(buffer, '\0', BUFLEN);
         processCommand(global_map, global_my_player, global_game, input_char, buffer);
         if(buffer[0] == 'F') {
@@ -637,8 +596,9 @@ int main(int argc, char *argv[]) {
         if(pthread_join(thread_server, NULL) < 0) {
             perror("pthread_join");
         }
+        unlink("socket");
     }
-    //Free memory
+    //Free memory allocated for map
     height = global_map_data.height;
     for(i = 0; i<height; i++) {
         free(global_map[i]);
@@ -647,13 +607,11 @@ int main(int argc, char *argv[]) {
     free(buffer);
     free(chat_buffer);
 
+    // Free memory allocated for messages
     for(i = 0; i<message_count; i++) {
         free(message_array[i]);
     }
-
     free(message_array);
-
-    unlink("socket");
 
     //Set back old settings
     tcsetattr(STDIN_FILENO, TCSANOW, &save_term);
@@ -665,7 +623,7 @@ int main(int argc, char *argv[]) {
         printf("main: Old terminal settings succesfully restored\n");
     }
     else {
-        //printf("main: Error restoring terminal settings. Old: %lu New: %lu\n", save_term.c_lflag, conf_term.c_lflag);
+        printf("main: Error restoring terminal settings. Old: %d New: %d\n", save_term.c_lflag, conf_term.c_lflag);
     }
 
     printf("main: Cleanup done, exiting\n");

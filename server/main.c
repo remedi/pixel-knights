@@ -38,6 +38,7 @@ int main(void) {
     memset(&game, 0, sizeof(Gamestate));
     ID id;
     Coord c;
+    Action a;
     uint8_t* data;
 
     // Initialize hints struct for getaddrinfo
@@ -180,16 +181,15 @@ int main(void) {
                     // If the message starts with A the message is an Action message
                     if (!strncmp(recvbuf, "A", 1)) {
 
-                        // Action message must be of length 4 (A + ID + x + y)
-                        if (strlen(recvbuf) != 4)
+                        // Action message must be of length 4 (A + ID + a)
+                        if (nbytes != 3)
                             continue;
 
                         // Read ID and x,y coordinates from recvbuf
                         data = (uint8_t*) (recvbuf + 1);
                         id = *data;
-                        c.x = *(data + 1);
-                        c.y = *(data + 2);
-                        status = movePlayer(&game, id, c);
+                        a = *(data + 1);
+                        status = movePlayer(&game, id, a);
                         if (status == -1)
                             fprintf(stderr, "movePlayer: Invalid game state\n");
                         else if (status == -2)
@@ -198,10 +198,15 @@ int main(void) {
 
                     // If the message starts with H the message is a Hello-message
                     if (!strncmp(recvbuf, "H", 1)) {
+
+                        // Hello message must be of length 2 or greater (H + username)
+                        if (nbytes < 2)
+                            continue;
+
                         id = createID();
                         c.x = 1;
                         c.y = 1;
-                        status = addPlayer(&game, id, c, 'U');
+                        status = addPlayer(&game, id, c, recvbuf[1]);
                         if (status == -1) {
                             fprintf(stderr, "addPlayer: Invalid game state\n");
                             continue;
@@ -220,7 +225,7 @@ int main(void) {
 
                     // If the message starts with C the message is a Chat-message
                     else if (!strncmp(recvbuf, "C", 1)) {
-                        snprintf(sendbuf, nbytes+7, "%s", recvbuf);
+                        snprintf(sendbuf, nbytes, "%s", recvbuf);
 
                         // Broadcast the chat message to all sockets
                         for (int i = 0; i <= fdmax; i++) {
@@ -239,7 +244,7 @@ int main(void) {
                     else if (!strncmp(recvbuf, "Q", 1)) {
 
                         // Quit message must be of length 2 (Q + ID) 
-                        if (strlen(recvbuf) != 2)
+                        if (nbytes != 2)
                             continue;
 
                         // Read ID from recvbuf and remove player
@@ -264,6 +269,7 @@ int main(void) {
 
                     // Just to be able to remotely close the server...
                     else if (!strncmp(recvbuf, "KILL", 4)) {
+                        printPlayers(&game);
                         free(sendbuf);
                         printf("Exiting...\n");
                         return 0;

@@ -73,7 +73,7 @@ uint8_t getSize(Gamestate* g) {
 }
 
 // Moves plyer to the destination Coord
-int movePlayer(Gamestate* g, ID id, Coord c) {
+int movePlayer(Gamestate* g, ID id, Action a) {
 
     // If gamestate NULL
     if (!g)
@@ -84,8 +84,22 @@ int movePlayer(Gamestate* g, ID id, Coord c) {
         return -2;
 
     // Update coordinates
-    g->c = c;
-
+    switch(a) {
+        case UP:
+            g->c.y--;
+            break;
+        case DOWN:
+            g->c.y++;
+            break;
+        case LEFT:
+            g->c.x--;
+            break;
+        case RIGHT:
+            g->c.x++;
+            break;
+        default:
+            break;
+    }
     return 0;
 }
 

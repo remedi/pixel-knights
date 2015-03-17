@@ -15,7 +15,7 @@ Gamestate* findPlayer(Gamestate*, ID);
 uint8_t getSize(Gamestate*);
 
 // Moves player to the destination Coord
-int movePlayer(Gamestate*, ID, Coord);
+int movePlayer(Gamestate*, ID, Action);
 
 // Changes the sign of the player
 int changePlayerSign(Gamestate*, ID, char);
