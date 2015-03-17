@@ -37,7 +37,8 @@ Playerdata global_my_player;
 //Game data:
 Gamedata global_game;
 int glob_i = 0;
-
+//Mutex for preventing map updates when player is writing a chat message or reading help
+pthread_mutex_t mtx = PTHREAD_MUTEX_INITIALIZER;
 
 //Add the new message contained in buf to the msg_array. Also rotate pointers to make the newest message show as first.
 char **new_message(char *buf, char **msg_array, int msg_count) {
@@ -71,14 +72,16 @@ char getInput(char *buffer) {
     char buf[40];
     character = getchar();
     if(character == 'c') {
+	pthread_mutex_lock(&mtx);
         printf("\nEnter max 40 bytes message: ");
         fgets(buf, 40, stdin);
         //Remove last newline:
         buf[strlen(buf)-1] = '\0';
         sprintf(buffer, "%s", buf);
         //new_message(fixed_buf, msg_array, msg_count);
+	pthread_mutex_unlock(&mtx);
     }
-    printf("\n");
+    //printf("\n");
     return character;
 }
 
@@ -297,7 +300,7 @@ void *updateMap(void *arg) {
 	    sleep(3);
 	}
         else {
-            printf("thread: Read %lu bytes from a socket: %d\n", bytes, sock_t);
+            //printf("thread: Read %lu bytes from a socket: %d\n", bytes, sock_t);
         }
         if(buf[0] == 'u') {
             //Draw map again
@@ -325,7 +328,7 @@ void *updateMap(void *arg) {
                 memset(buf, '\0', BUFLEN);
                 continue;
             }
-            printf("thread: Got G message\n");
+            //printf("thread: Got G message\n");
             players = initGame(buf, &global_game, *map_data);
             if(players == NULL) {
                 printf("thread: initGame failed\n");
@@ -338,30 +341,33 @@ void *updateMap(void *arg) {
             printf("thread: Received unkown message: %c. Ignoring\n", buf[0]);
             continue;
         }
+	//Only draw map if user isn't busy doing something else
+	if(pthread_mutex_trylock(&mtx) == 0) {
+	    //system("clear");
+	    for(i = 0; i<global_game.player_count; i++) {
+		//Add players
+		x = players[i].x_coord;
+		y = players[i].y_coord;
+		global_map[y][x] = players[i].sign;
+	    }
+	    printf("\n");
+	    for(i = 0; i<height; i++) {
+		//Actual drawing
+		printf("\t%s", global_map[i]);
+		printf("\t\t%s\n", global_msg_arr[global_msg_count-i-1]);
+	    }
+	    printf("\n");
+	    for(i = 0; i<global_game.player_count; i++) {
+		//Undo changes
+		x = players[i].x_coord;
+		y = players[i].y_coord;
+		global_map[y][x] = ' ';
+	    }
 
-        //system("clear");
-        for(i = 0; i<global_game.player_count; i++) {
-            //Add players
-            x = players[i].x_coord;
-            y = players[i].y_coord;
-            global_map[y][x] = players[i].sign;
-        }
-        printf("\n");
-        for(i = 0; i<height; i++) {
-            //Actual drawing
-            printf("\t%s", global_map[i]);
-            printf("\t\t%s\n", global_msg_arr[global_msg_count-i-1]);
-        }
-        printf("\n");
-        for(i = 0; i<global_game.player_count; i++) {
-            //Undo changes
-            x = players[i].x_coord;
-            y = players[i].y_coord;
-            global_map[y][x] = ' ';
-        }
-
-        printf("DEBUG: Drawing loop: %d\n\n", j);
-        j++;
+	    printf("DEBUG: Drawing loop: %d. Press 'h' for help\n", j);
+	    j++;
+	    pthread_mutex_unlock(&mtx);
+	}
         memset(buf, '\0', BUFLEN);
         pthread_cleanup_pop(0);
     }
@@ -439,6 +445,8 @@ int main(int argc, char *argv[]) {
     }
     conf_term = save_term;
     conf_term.c_lflag = (conf_term.c_lflag & ~ICANON);
+    conf_term.c_lflag = (conf_term.c_lflag & ~ECHO);
+    conf_term.c_lflag = (conf_term.c_lflag & ~ECHONL);
     //Set new settings
     if(tcsetattr(STDIN_FILENO, TCSANOW, &conf_term) == -1) {
         perror("main, tcsetattr");
@@ -449,7 +457,7 @@ int main(int argc, char *argv[]) {
         perror("main, tcgetattr");
     }
     else {
-        if((conf_term.c_lflag & ICANON) == 0) {
+        if((conf_term.c_lflag & (ICANON | ECHO | ECHONL)) == 0) {
             printf("main: Terminal settings succesfully changed\n");
         }
         else {
@@ -538,7 +546,7 @@ int main(int argc, char *argv[]) {
 
     while(!exit_clean) {
         memset(buffer, '\0', BUFLEN);
-        printf("main: Getting input..\n");
+        //printf("main: Getting input..\n");
         //Get character or message from terminal
         input_char = getInput(buffer);
         if(input_char == 0) {
@@ -573,29 +581,39 @@ int main(int argc, char *argv[]) {
             continue;
         }
         else if(input_char == 'z') {
+	    pthread_mutex_lock(&mtx);
             printf("Game info: Character under control: sign: %c id: %d x: %d y: %d\n", global_my_player.sign, global_my_player.id, global_my_player.x_coord, global_my_player.y_coord);
             printf("Game info: Player count: %d Map width: %d Map height: %d\n", global_game.player_count, global_map_data.width, global_map_data.height);
+	    printf("Press any key to continue\n");
+	    getchar();
+	    pthread_mutex_unlock(&mtx);
             continue;
         }
+	else if(input_char == 'h') {
+	    pthread_mutex_lock(&mtx);
+            printf("HELP: Movement: \"wasd\" Quit: \"0\" or \"q\" Chat: \"c\"\n");
+            printf("DEBUG: Change player: \"x\" Game info: \"z\"\n");
+	    printf("Press any key to continue\n");
+	    getchar();
+	    pthread_mutex_unlock(&mtx);
+	}
         memset(buffer, '\0', BUFLEN);
         processCommand(global_map, global_my_player, global_game, input_char, buffer);
         if(buffer[0] == 'F') {
             //printf("Not valid command!\n");
             //write(sock, "u", 1);
-            printf("HELP: Movement: \"wasd\" Quit: \"0\" or \"q\" Chat: \"c\"\n");
-            printf("DEBUG: Change player: \"x\" Game info: \"z\"\n");
             continue;
         }
         else if(buffer[0] == 'B') {
-            printf("Action not possible\n");
+            //printf("Action not possible\n");
             continue;
         }
         else if(strlen(buffer) == 0) {
             continue;
         }
-        printf("main: Wrote ");
+        //printf("main: Wrote ");
         bytes = write(sock, buffer, strlen(buffer));
-        printf("%lu bytes to socket: %d\n", bytes, sock);
+        //printf("%lu bytes to socket: %d\n", bytes, sock);
         //system("clear");
     }
 
