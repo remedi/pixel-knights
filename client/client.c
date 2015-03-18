@@ -263,6 +263,10 @@ int main(int argc, char *argv[]) {
         }
         memset(buffer, '\0', BUFLEN);
         processCommand(my_id, input_char, buffer);
+        if(buffer[0] == 'A') {
+            bytes = write(sock, buffer, 3);
+            continue;
+        }
         if(buffer[0] == 'F') {
             //printf("Not valid command!\n");
             //write(sock, "u", 1);
