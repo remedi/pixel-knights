@@ -3,3 +3,4 @@
 *.swp
 server/server
 client/client
+*.dSYM
