@@ -18,8 +18,6 @@
 #include "local.h"
 #include "update.h"
 
-#define LOCALGAME 1
-#define NETGAME 2
 #define BUFLEN 1000
 #define MSGLEN 40
 
@@ -50,7 +48,6 @@ char getInput(char *buffer) {
         sprintf(buffer, "%s", buf);
         pthread_mutex_unlock(&mtx);
     }
-    //printf("\n");
     return character;
 }
 
@@ -72,10 +69,7 @@ char *processCommand(char id, char input, char *buf) {
             a = RIGHT;
             break;
         default:
-            //F indicates 'Fail', not a valid command:
-            buf[0] = 'F';
-            return buf;
-            break;
+            return NULL;
     }
     sprintf(buf, "A%c", id);
     memcpy(buf+2, &a, 1);
@@ -146,7 +140,7 @@ int main(int argc, char *argv[]) {
     }
     else {
         printf("Usage: client <ipv4> <port>\n");
-        exit(-1);
+        exit(EXIT_FAILURE);
     }
 
     //Get terminal settings
@@ -172,7 +166,7 @@ int main(int argc, char *argv[]) {
         }
         else {
             perror("main: Error with term setattr");
-            exit(-1);
+            exit(EXIT_FAILURE);
         }
     }
 
@@ -212,7 +206,7 @@ int main(int argc, char *argv[]) {
     }
     else {
         printf("Unexpected message type from server: %c\n", buffer[0]);
-        exit(-1);
+        exit(EXIT_FAILURE);
     }
 
     // Fill the thread context struct and start the thread for updating map
@@ -226,12 +220,11 @@ int main(int argc, char *argv[]) {
 
     while(!exit_clean) {
         memset(buffer, '\0', BUFLEN);
-        //printf("main: Getting input..\n");
         //Get character or message from terminal
         input_char = getInput(buffer);
-        if(input_char == 0) {
+        if(!input_char) {
             printf("main, getInput error\n");
-            exit(-1);
+            exit(EXIT_FAILURE);
         }
         else if(input_char == 'c') {
             memset(chat_buffer, '\0', BUFLEN);
@@ -247,18 +240,9 @@ int main(int argc, char *argv[]) {
             write(sock, buffer, 2);
             break;
         }
-        else if(input_char == 'z') {
-            pthread_mutex_lock(&mtx);
-            printf("This info is currently disabled\n");
-            printf("Press any key to continue\n");
-            getchar();
-            pthread_mutex_unlock(&mtx);
-            continue;
-        }
         else if(input_char == 'h') {
             pthread_mutex_lock(&mtx);
             printf("HELP: Movement: \"wasd\" Quit: \"0\" or \"q\" Chat: \"c\"\n");
-            printf("DEBUG: Game info: \"z\"\n");
             printf("Press any key to continue\n");
             getchar();
             pthread_mutex_unlock(&mtx);
@@ -272,6 +256,7 @@ int main(int argc, char *argv[]) {
             bytes = write(sock, buffer, 3);
         }
 
+        // Thread sets this flag when completed
         if (thread_complete)
             break;
     }
