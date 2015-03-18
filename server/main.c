@@ -211,10 +211,29 @@ int main(void) {
                         }
                         sendbuf[0] = 'I';
                         memcpy(sendbuf + 1, &id, 1);
-                        if ((nbytes = send(i, sendbuf, 2, 0)) == -1) {
+                        if ((send(i, sendbuf, 2, 0)) == -1) {
                             perror("send error");
                             continue;
                         }
+
+                        // Send announcement to all players about new player
+                        char* username = malloc(sizeof(char)*nbytes);
+                        memset(username, 0, nbytes);
+                        memcpy(username, recvbuf+1, nbytes-1);
+                        status = sendAnnounce(&game, username, nbytes-1, id);
+                        if (status == -1) {
+                            fprintf(stderr, "sendAnnounce: Invalid game state\n");
+                            continue;
+                        }
+                        else if (status == -2) {
+                            fprintf(stderr, "sendAnnounce: Empty game\n");
+                            continue;
+                        }
+                        else if (status == -3) {
+                            fprintf(stderr, "sendAnnounce: Send error\n");
+                            continue;
+                        }
+                        free(username);
                     }
 
                     // If the message starts with C the message is a Chat-message
