@@ -14,16 +14,15 @@
 #include <sys/stat.h>
 #include <sys/un.h>
 
-#include "client.h"
 #include "local.h"
+#include "../maps/maps.c"
+#include "client.h"
 
 #define LOCALGAME 1
 #define NETGAME 2
 #define BUFLEN 1000
 #define MSGLEN 40
 
-#define MAP_HEIGHT 10
-#define MAP_WIDTH 10
 //Game data:
 Gamedata global_game;
 int glob_i = 0;
@@ -125,45 +124,6 @@ char *processCommand(char id, char input, char *buf) {
     return buf;
 }
 
-//Allocate memory for map. Initialize memory as map tiles. Return two-dimensional character array as the map.
-char **createMap(Mapdata *map_data) {
-    int height = map_data->height;
-    int width = map_data->width;
-    int i;
-
-    // Allocate memory for map
-    char **rows = malloc(sizeof(char *) * height);
-    if(rows == NULL) {
-        perror("drawMap, malloc");
-        return NULL;
-    }
-
-    //Allocate memory for each row and set initial tiles
-    for(i = 0; i<height; i++) {
-        rows[i] = malloc(sizeof(char) * width + 1);
-        if(rows[i] == NULL) {
-            perror("drawMap, malloc");
-            free(rows);
-            return NULL;
-        }
-        // Write spaces and an ending zero to each line
-        memset(rows[i], ' ', width-1);
-        rows[i][width] = '\0';
-    }
-
-    //Add top and bottom wall
-    memset(rows[0], '#', width);
-    memset(rows[height-1], '#', width);
-
-    //Add left and right walls
-    for(i = 0; i<height; i++) {
-        rows[i][0] = '#';
-        rows[i][width-1] = '#';
-    }
-
-    return rows;
-}
-
 //This function is called when G message is received. Parse game status from a character string received from the server.
 Playerdata *initGame(char *buf, Gamedata *game_data, Mapdata map_data) {
     buf++;
@@ -220,7 +180,6 @@ void *updateMap(void *arg) {
     ssize_t bytes;
     int break_flag = 1;
 
-    //int sock_t = global_client_sock;
     char *buf = malloc(sizeof(char) * BUFLEN);
 
     char **rows;
@@ -229,17 +188,22 @@ void *updateMap(void *arg) {
     int message_count;
 
     // Initialize mapdata
-    map_data.height = MAP_HEIGHT;
+    /*map_data.height = MAP_HEIGHT;
     map_data.width = MAP_WIDTH;
     rows = createMap(&map_data);
     if(rows == NULL) {
         printf("thread: createMap error");
         exit(-1);
+	}*/
+    if(createMap(&map_data) != 0) {
+	perror("createMap");
+	exit(-1);
     }
+    rows = map_data.map;
 
 
     //Reserve memory for chat service
-    message_count = MAP_HEIGHT;
+    message_count = map_data.height;
     message_array = malloc(sizeof(char *) * message_count);
     for(i = 0; i<message_count; i++) {
         message_array[i] = malloc(sizeof(char) * MSGLEN);
@@ -262,7 +226,7 @@ void *updateMap(void *arg) {
             continue;
         }
         else if(bytes == 0) {
-            printf("thread: Server likely disconnected\n");
+            printf("thread: Socket disconnected\n");
             break_flag = 0;
         }
         else if(buf[0] == 'C') {
@@ -434,7 +398,6 @@ int main(int argc, char *argv[]) {
     }
 
     //Start the thread
-    global_client_sock = sock;
     if(pthread_create(&thread, NULL, updateMap, &sock) < 0) {
         perror("main, pthread_create");
     }
