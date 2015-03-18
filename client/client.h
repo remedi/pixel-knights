@@ -18,12 +18,6 @@ typedef struct gamedata {
   Playerdata *players;
 }Gamedata;
 
-typedef struct mapdata {
-  uint8_t height;
-  uint8_t width;
-  char **map;
-}Mapdata;
-
 typedef enum {
 	UP,
 	DOWN,
@@ -37,10 +31,6 @@ typedef enum {
 
 //Add new message to the chat service
 char **new_message(char *, char **, int);
-
-//Create map by allocating memory and adding walls
-//char **createMap(char **, struct gamedata);
-char **createMap(struct mapdata *);
 
 //For handling the 'G' message: create struct that contains info of all of the players and monsters
 struct playerdata *initGame(char *, Gamedata *, Mapdata);
