@@ -162,7 +162,7 @@ void *updateMap(void *ctx) {
 
         // Only draw map if user isn't busy doing something else
         if(pthread_mutex_trylock(c->lock) == 0) {
-            //system("clear");
+            system("clear");
             for(i = 0; i<game.player_count; i++) {
                 //Add players
                 x = players[i].x_coord;
@@ -202,8 +202,9 @@ void *updateMap(void *ctx) {
     }
     free(rows);
 
+    *c->done = 1;
     pthread_cleanup_pop(1);
     free(players);
-    printf("thread: Read 0 bytes, exiting\n");
+    printf("thread: Server hung up unexpectedly, exiting\n");
     return 0;
 }

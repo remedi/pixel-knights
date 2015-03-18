@@ -5,6 +5,7 @@
 struct context_s {
     int* sock;
     pthread_mutex_t* lock;
+    volatile sig_atomic_t* done;
 };
 
 // Add the new message contained in buf to the msg_array.

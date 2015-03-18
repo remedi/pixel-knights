@@ -133,6 +133,7 @@ int main(int argc, char *argv[]) {
     struct termios save_term, conf_term;
     int sock = 0;
     int exit_clean = 0;
+    volatile sig_atomic_t thread_complete = 0;
 
     if(argc == 3) {
         printf("Joining a multiplayer game..\n");
@@ -217,7 +218,8 @@ int main(int argc, char *argv[]) {
     // Fill the thread context struct and start the thread for updating map
     struct context_s ctx;
     ctx.sock = &sock;
-    ctx.lock = &mtx; 
+    ctx.lock = &mtx;
+    ctx.done = &thread_complete; 
     if(pthread_create(&thread, NULL, updateMap, &ctx) < 0) {
         perror("main, pthread_create");
     }
@@ -261,22 +263,17 @@ int main(int argc, char *argv[]) {
             getchar();
             pthread_mutex_unlock(&mtx);
         }
-        memset(buffer, '\0', BUFLEN);
-        processCommand(my_id, input_char, buffer);
-        if(buffer[0] == 'A') {
+        else {
+            processCommand(my_id, input_char, buffer);
+            if (!buffer) {
+                printf("main: Unknown command\n");
+                continue;
+            }
             bytes = write(sock, buffer, 3);
-            continue;
         }
-        if(buffer[0] == 'F') {
-            //printf("Not valid command!\n");
-            //write(sock, "u", 1);
-            continue;
-        }
-        else if(strlen(buffer) == 0) {
-            continue;
-        }
-        bytes = write(sock, buffer, strlen(buffer));
-        //system("clear");
+
+        if (thread_complete)
+            break;
     }
 
     //Perform cleanup:
@@ -288,7 +285,7 @@ int main(int argc, char *argv[]) {
     if(pthread_join(thread, NULL) < 0) {
         perror("pthread_join");
     }
-    
+
     //Free memory allocated for chat messages
     free(buffer);
     free(chat_buffer);

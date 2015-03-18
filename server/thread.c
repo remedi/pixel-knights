@@ -14,7 +14,7 @@
 #include "typedefs.h"
 
 #define MAXDATASIZE 128
-#define G_INTERVAL 5
+#define G_INTERVAL 1
 
 void* sendGamestate(void* ctx) {
 
@@ -59,7 +59,6 @@ void* sendGamestate(void* ctx) {
         // Send game state to every client
         g = game;
         while (g->next != NULL) {
-            printf("%d", g->sock);
             if ((nbytes = send(g->next->sock, sendbuf, status, 0)) == -1) {
                 perror("Thread: send error");
             }

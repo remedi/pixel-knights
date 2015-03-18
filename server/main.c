@@ -26,7 +26,6 @@ int main(void) {
     // Declare variables
     struct addrinfo* results, hints, *i;
     struct sockaddr_storage their_addr;
-    struct timeval tv;
     socklen_t socklen = sizeof(struct sockaddr);
     int status, listenfd, new_fd, fdmax, yes = 1;
     fd_set rdset, master;
@@ -118,13 +117,8 @@ int main(void) {
         // Copy the master set to read set
         rdset = master;
 
-        // Re-initialize select timeout
-        memset(&tv, 0, sizeof(struct timeval));
-        tv.tv_sec = 1;
-        tv.tv_usec = 0;
-
         // Select the descriptors that are ready for reading
-        if ((status = select(fdmax + 1, &rdset, NULL, NULL, &tv)) == -1) {
+        if ((status = select(fdmax + 1, &rdset, NULL, NULL, NULL)) == -1) {
             perror("select error");
             exit(EXIT_FAILURE);
         }
@@ -155,6 +149,9 @@ int main(void) {
             // Iterate every descriptor below fdmax
             for (int i = 0; i <= fdmax; i++) {
 
+                // Clean the receive buffer
+                memset(recvbuf, 0, MAXDATASIZE);
+
                 // If i is ready for reading
                 if (FD_ISSET(i, &rdset)) {
 
@@ -163,9 +160,7 @@ int main(void) {
                         perror("recv error");
                         continue;
                     }
-
                     recvbuf[nbytes] = '\0';
-                    printf("%s", recvbuf);
 
                     // If the message starts with A the message is an Action message
                     if (!strncmp(recvbuf, "A", 1)) {
