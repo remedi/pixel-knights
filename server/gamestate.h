@@ -3,6 +3,7 @@
 
 #include <inttypes.h>
 
+#include "../maps/maps.h"
 #include "typedefs.h"
 
 // Adds player to the gamestate linked-list
@@ -15,7 +16,7 @@ Gamestate* findPlayer(Gamestate*, ID);
 uint8_t getSize(Gamestate*);
 
 // Moves player to the destination Coord
-int movePlayer(Gamestate*, ID, Action);
+int movePlayer(Gamestate*, Mapdata *, ID, Action);
 
 // Changes the sign of the player
 int changePlayerSign(Gamestate*, ID, char);

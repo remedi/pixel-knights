@@ -13,6 +13,7 @@
 #include <arpa/inet.h>
 #include <pthread.h>
 
+#include "../maps/maps.h"
 #include "server.h"
 #include "gamestate.h"
 #include "thread.h"
@@ -34,6 +35,7 @@ int main(void) {
     char ipstr[INET_ADDRSTRLEN];
     ssize_t nbytes; 
     pthread_t gamestate_thread;
+    Mapdata mapdata;
 
     // Initialize game state
     Gamestate game;
@@ -48,6 +50,11 @@ int main(void) {
     hints.ai_family = AF_INET;
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_flags = AI_PASSIVE;
+
+    if(createMap(&mapdata, 2) != 0) {
+	printf("Error creating map\n");
+	exit(EXIT_FAILURE);
+    }
 
     // Try to get addrinfo, exiting on error
     if ((status = getaddrinfo(NULL, PORT, &hints, &results)) != 0) {
@@ -177,7 +184,7 @@ int main(void) {
 
                         // Move player and lock game state
                         pthread_mutex_lock(&lock);
-                        status = movePlayer(&game, id, a);
+                        status = movePlayer(&game, &mapdata, id, a);
                         pthread_mutex_unlock(&lock);
 
                         if (status == -1) {

@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "../maps/maps.h"
 #include "gamestate.h"
 #include "server.h" 
 
@@ -75,7 +76,9 @@ uint8_t getSize(Gamestate* g) {
 }
 
 // Moves plyer to the destination Coord
-int movePlayer(Gamestate* g, ID id, Action a) {
+int movePlayer(Gamestate* g, Mapdata *map_data, ID id, Action a) {
+
+    Coord temp_coord;
 
     // If gamestate NULL
     if (!g)
@@ -85,31 +88,37 @@ int movePlayer(Gamestate* g, ID id, Action a) {
     if (!(g = findPlayer(g, id)))
         return -2;
 
+    temp_coord = g->c;
+
     // Update coordinates
     switch(a) {
         case UP:
-            if (checkCoordinate(g->c.y-1)) {
+	    temp_coord.y--;
+	    if(checkWall(map_data, temp_coord) == 0) {
                 g->c.y--;
                 break;
             }
             else
                 return -3;
         case DOWN:
-            if (checkCoordinate(g->c.y+1)) {
+	    temp_coord.y++;
+	    if(checkWall(map_data, temp_coord) == 0) {
                 g->c.y++;
                 break;
             }
             else
                 return -3;
         case LEFT:
-            if (checkCoordinate(g->c.x-1)) {
+	    temp_coord.x--;
+	    if(checkWall(map_data, temp_coord) == 0) {
                 g->c.x--;
                 break;
             }
             else
                 return -3;
         case RIGHT:
-            if (checkCoordinate(g->c.x+1)) {
+	    temp_coord.x++;
+	    if(checkWall(map_data, temp_coord) == 0) {
                 g->c.x++;
                 break;
             }

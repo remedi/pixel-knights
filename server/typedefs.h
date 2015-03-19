@@ -6,11 +6,13 @@
 // ID is 8 bits long unsigned integer
 typedef uint8_t ID;
 
+/* This struct is moved to maps.h:
 // Coordinate struct
 typedef struct coodinate_s {
 	uint8_t x;
 	uint8_t y;
 } Coord;
+*/
 
 typedef struct gamestate_s Gamestate;
 

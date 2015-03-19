@@ -5,6 +5,7 @@
 
 #include <sys/socket.h>
 
+#include "../maps/maps.h"
 #include "server.h"
 #include "typedefs.h"
 

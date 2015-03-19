@@ -108,7 +108,7 @@ void *updateMap(void *ctx) {
     int *exit_clean = c->main_exit;
 
     // Initialize mapdata
-    if(createMap(&map_data, 1) == -1) {
+    if(createMap(&map_data, 2) == -1) {
 	printf("thread: error with createMap\n");
 	exit(EXIT_FAILURE);
     }
