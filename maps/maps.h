@@ -19,6 +19,6 @@ int createMap(Mapdata *, int);
 int checkWall(Mapdata *, Coord);
 
 //Frees memory allocated for map.
-void freeMap(Mapdata *);
+void freeMap(void *);
 
 #endif

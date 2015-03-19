@@ -69,3 +69,15 @@ int createMap(Mapdata *map_data, int mapfile) {
     map_data->map = rows;
     return 0;
 }
+
+void freeMap(void *arg) {
+    int i = 0;
+    Mapdata *map_data = arg;
+    char **rows = map_data->map;
+    // Free memory allocated for map
+    for(i = 0; i<map_data->height; i++) {
+        free(rows[i]);
+    }
+    free(rows);
+    return;
+}
