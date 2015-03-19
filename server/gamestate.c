@@ -245,3 +245,22 @@ int sendAnnounce(Gamestate* g, char* msg, size_t len, ID id) {
     free(data);
     return 0;
 }
+
+// Terminates the Gamestate instance
+void freePlayers(Gamestate* g) {
+
+    // If gamestate NULL
+    if (!g)
+        return;
+
+    // First element does not contain player
+    g = g->next;
+    
+    // Free all memory
+    Gamestate* tmp; 
+    while (g) {
+        tmp = g->next;
+        free(g);
+        g = tmp;
+    }
+}

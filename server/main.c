@@ -106,7 +106,6 @@ int main(void) {
     struct context_s ctx;
     ctx.g = &game;
     ctx.lock = &lock;
-
     if (pthread_create(&gamestate_thread, NULL, sendGamestate, &ctx) < 0) {
         perror("pthread_create error");
         exit(EXIT_FAILURE);
@@ -131,8 +130,10 @@ int main(void) {
                 perror("accept error");
                 continue;
             }
-            // TODO: At this point we can print the address from where the connection came
-            printf("New connection accepted!\n");
+            // Print the address from where the connection came
+            inet_ntop(AF_INET, &((struct sockaddr_in*)&their_addr)->sin_addr,\
+                      recvbuf, INET_ADDRSTRLEN);
+            printf("New connection accepted from %s!\n", recvbuf);
 
             // Clear their_addr and socklen
             socklen = sizeof(struct sockaddr_storage);
@@ -179,10 +180,14 @@ int main(void) {
                         status = movePlayer(&game, id, a);
                         pthread_mutex_unlock(&lock);
 
-                        if (status == -1)
+                        if (status == -1) {
                             fprintf(stderr, "movePlayer: Invalid game state\n");
-                        else if (status == -2)
+                            continue;
+                        }
+                        else if (status == -2) {
                             fprintf(stderr, "movePlayer: ID not found\n");
+                            continue;
+                        }
                     }
 
                     // If the message starts with H the message is a Hello-message
@@ -268,10 +273,14 @@ int main(void) {
                         status = removePlayer(&game, *data);
                         pthread_mutex_unlock(&lock);
 
-                        if (status == -1)
+                        if (status == -1) {
                             fprintf(stderr, "removePlayer: Invalid game state\n");
-                        else if (status == -2)
+                            continue;
+                        }
+                        else if (status == -2) {
                             fprintf(stderr, "removePlayer: ID not found\n");
+                            continue;
+                        }
 
                         // Clear the descriptor from the master set
                         FD_CLR(i, &master);
@@ -281,8 +290,9 @@ int main(void) {
 
                     // Just to be able to remotely close the server...
                     else if (!strncmp(recvbuf, "KILL", 4)) {
-                        printPlayers(&game);
+                        freePlayers(&game);
                         pthread_cancel(gamestate_thread);
+                        pthread_join(gamestate_thread, NULL);
                         free(sendbuf);
                         printf("Exiting...\n");
                         return 0;

@@ -32,4 +32,7 @@ int parseGamestate(Gamestate*, void*, int);
 // Sends announcement to all players except ID
 int sendAnnounce(Gamestate*, char*, size_t, ID);
 
+// Terminates the Gamestate instance
+void freePlayers(Gamestate*);
+
 #endif
