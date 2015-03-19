@@ -9,6 +9,7 @@
 #include <sys/socket.h>
 
 #include "gamestate.h"
+#include "server.h" 
 
 // Adds player to the gamestate linked-list
 int addPlayer(Gamestate* g, ID id, Coord c, int sock, char sign) {
@@ -88,19 +89,35 @@ int movePlayer(Gamestate* g, ID id, Action a) {
     // Update coordinates
     switch(a) {
         case UP:
-            g->c.y--;
-            break;
+            if (checkCoordinate(g->c.y-1)) {
+                g->c.y--;
+                break;
+            }
+            else
+                return -3;
         case DOWN:
-            g->c.y++;
-            break;
+            if (checkCoordinate(g->c.y+1)) {
+                g->c.y++;
+                break;
+            }
+            else
+                return -3;
         case LEFT:
-            g->c.x--;
-            break;
+            if (checkCoordinate(g->c.x-1)) {
+                g->c.x--;
+                break;
+            }
+            else
+                return -3;
         case RIGHT:
-            g->c.x++;
-            break;
+            if (checkCoordinate(g->c.x+1)) {
+                g->c.x++;
+                break;
+            }
+            else
+                return -3;
         default:
-            break;
+            return -4;
     }
     return 0;
 }

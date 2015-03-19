@@ -20,3 +20,15 @@ ID createID(void) {
     static ID id = 0x01;
     return id++;
 }
+
+// Check that the coordinate is valid 
+// NOTE: THIS IS PRELIMINARY 
+int checkCoordinate(int c) {
+
+    // Just perform some checking
+    if (c < 1)
+        return 0;
+    if (c > 8)
+        return 0;
+    return 1;
+}

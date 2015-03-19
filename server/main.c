@@ -188,6 +188,14 @@ int main(void) {
                             fprintf(stderr, "movePlayer: ID not found\n");
                             continue;
                         }
+                        else if (status == -3) {
+                            fprintf(stderr, "movePlayer: Illegal move\n");
+                            continue;
+                        }
+                        else if (status == -4) {
+                            fprintf(stderr, "movePlayer: Action not found\n");
+                            continue;
+                        }
                     }
 
                     // If the message starts with H the message is a Hello-message
