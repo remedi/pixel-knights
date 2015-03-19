@@ -24,6 +24,45 @@ void free_memory(void *ptr) {
     free(ptr);
 }
 
+// Allocate memory for map. Initialize memory as map tiles.
+// Return two-dimensional character array as the map.
+char **createMap(Mapdata *map_data) {
+    int height = map_data->height;
+    int width = map_data->width;
+    int i;
+
+    // Allocate memory for map
+    char **rows = malloc(sizeof(char *) * height);
+    if(rows == NULL) {
+        perror("drawMap, malloc");
+        return NULL;
+    }
+
+    //Allocate memory for each row and set initial tiles
+    for(i = 0; i<height; i++) {
+        rows[i] = malloc(sizeof(char) * width + 1);
+        if(rows[i] == NULL) {
+            perror("drawMap, malloc");
+            free(rows);
+            return NULL;
+        }
+        // Write spaces and an ending zero to each line
+        memset(rows[i], ' ', width-1);
+        rows[i][width] = '\0';
+    }
+
+    //Add top and bottom wall
+    memset(rows[0], '#', width);
+    memset(rows[height-1], '#', width);
+
+    //Add left and right walls
+    for(i = 0; i<height; i++) {
+        rows[i][0] = '#';
+        rows[i][width-1] = '#';
+    }
+
+    return rows;
+}
 
 // Add the new message contained in buf to the msg_array.
 // Also rotate pointers to make the newest message show as first.
@@ -41,7 +80,8 @@ char **new_message(char *buf, char **msg_array, int msg_count) {
     return msg_array;
 }
 
-//This function is called when G message is received. Parse game status from a character string received from the server.
+// This function is called when G message is received.
+// Parse game status from a character string received from the server.
 Playerdata *initGame(char *buf, Gamedata *game_data, Mapdata map_data) {
     buf++;
     int i;
@@ -130,7 +170,8 @@ void *updateMap(void *ctx) {
 
     printf("thread: Reading socket %d\n", *sock_t);
     while(break_flag) {
-        //This cleanup handler needs to be set again for each loop, in case the address of 'players' is changed.
+        // This cleanup handler needs to be set again for each loop
+        // in case the address of 'players' is changed.
         pthread_cleanup_push(free_memory, players);
         bytes = read(*sock_t, buf, BUFLEN);
         if(bytes < 0) {
@@ -143,9 +184,7 @@ void *updateMap(void *ctx) {
         }
         else if(buf[0] == 'C') {
             printf("thread: Got C message\n");
-            buf++;
-            new_message(buf, message_array, message_count);
-            buf--;
+            new_message(buf+1, message_array, message_count);
         }
         else if(buf[0] == 'G') {
             if((bytes - 2) % 4 != 0) {
