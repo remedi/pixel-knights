@@ -18,11 +18,6 @@ typedef struct gamedata {
   Playerdata *players;
 } Gamedata;
 
-typedef struct mapdata {
-  uint8_t height;
-  uint8_t width;
-  char **map;
-} Mapdata;
 
 // Context struct for thread
 struct context_s {
@@ -34,8 +29,6 @@ struct context_s {
 // Thread cleanup handler
 void free_memory(void *);
 
-// Create map by allocating memory and adding walls
-char **createMap(struct mapdata *);
 
 // Add the new message contained in buf to the msg_array.
 // Also rotate pointers to make the newest message show as first.

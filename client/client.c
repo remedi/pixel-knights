@@ -15,6 +15,7 @@
 #include <sys/stat.h>
 #include <sys/un.h>
 
+#include "../maps/maps.h"
 #include "client.h"
 #include "update.h"
 

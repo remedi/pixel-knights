@@ -10,6 +10,7 @@
 #include <pthread.h>
 #include <unistd.h>
 
+#include "../maps/maps.h"
 #include "client.h"
 #include "update.h"
 
@@ -24,45 +25,6 @@ void free_memory(void *ptr) {
     free(ptr);
 }
 
-// Allocate memory for map. Initialize memory as map tiles.
-// Return two-dimensional character array as the map.
-char **createMap(Mapdata *map_data) {
-    int height = map_data->height;
-    int width = map_data->width;
-    int i;
-
-    // Allocate memory for map
-    char **rows = malloc(sizeof(char *) * height);
-    if(rows == NULL) {
-        perror("drawMap, malloc");
-        return NULL;
-    }
-
-    //Allocate memory for each row and set initial tiles
-    for(i = 0; i<height; i++) {
-        rows[i] = malloc(sizeof(char) * width + 1);
-        if(rows[i] == NULL) {
-            perror("drawMap, malloc");
-            free(rows);
-            return NULL;
-        }
-        // Write spaces and an ending zero to each line
-        memset(rows[i], ' ', width-1);
-        rows[i][width] = '\0';
-    }
-
-    //Add top and bottom wall
-    memset(rows[0], '#', width);
-    memset(rows[height-1], '#', width);
-
-    //Add left and right walls
-    for(i = 0; i<height; i++) {
-        rows[i][0] = '#';
-        rows[i][width-1] = '#';
-    }
-
-    return rows;
-}
 
 // Add the new message contained in buf to the msg_array.
 // Also rotate pointers to make the newest message show as first.
@@ -146,13 +108,11 @@ void *updateMap(void *ctx) {
     int message_count;
 
     // Initialize mapdata
-    map_data.height = MAP_HEIGHT;
-    map_data.width = MAP_WIDTH;
-    rows = createMap(&map_data);
-    if(rows == NULL) {
-        printf("thread: createMap error");
-        exit(-1);
+    if(createMap(&map_data, 1) == -1) {
+	printf("thread: error with createMap\n");
+	exit(EXIT_FAILURE);
     }
+    rows = map_data.map;
 
     //Reserve memory for chat service
     message_count = MAP_HEIGHT;
