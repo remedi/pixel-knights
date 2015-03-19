@@ -14,6 +14,9 @@ ID createID(void);
 // Check that the coordinate is valid 
 int checkCoordinate(int);
 
+// Sends announcement to all players except ID
+int sendAnnounce(Gamestate*, char*, size_t, ID);
+
 // TODO: Load map data to server
 int loadMap(FILE*);
 

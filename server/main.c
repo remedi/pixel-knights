@@ -29,7 +29,7 @@ int main(void) {
     socklen_t socklen = sizeof(struct sockaddr);
     int status, listenfd, new_fd, fdmax, yes = 1;
     fd_set rdset, master;
-    char recvbuf[MAXDATASIZE];
+    char* recvbuf = malloc(MAXDATASIZE * sizeof(char));
     char* sendbuf = malloc(MAXDATASIZE * sizeof(char));
     char ipstr[INET_ADDRSTRLEN];
     ssize_t nbytes; 
@@ -230,10 +230,11 @@ int main(void) {
                         }
 
                         // Send announcement to all players about new player
-                        char* username = malloc(sizeof(char)*nbytes);
-                        memset(username, 0, nbytes);
-                        memcpy(username, recvbuf+1, nbytes-1);
-                        status = sendAnnounce(&game, username, nbytes-1, id);
+                        char* message = malloc(sizeof(char)*(nbytes + 14));
+                        recvbuf[nbytes] = '\0';
+                        sprintf(message, "C%s joined game!", recvbuf+1);
+                        status = sendAnnounce(&game, message, strlen(message), id);
+                        free(message);
                         if (status == -1) {
                             fprintf(stderr, "sendAnnounce: Invalid game state\n");
                             continue;
@@ -246,7 +247,6 @@ int main(void) {
                             fprintf(stderr, "sendAnnounce: Send error\n");
                             continue;
                         }
-                        free(username);
                     }
 
                     // If the message starts with C the message is a Chat-message
@@ -289,6 +289,20 @@ int main(void) {
                             fprintf(stderr, "removePlayer: ID not found\n");
                             continue;
                         }
+                        else
+                            printf("Player with id: %02x disconnected\n", *data);
+
+                        // Send disconnect announcement
+                        status = sendAnnounce(&game, "CPlayer disconnected!", 21, 0); 
+                        if (status == -1) {
+                            fprintf(stderr, "sendAnnounce: Invalid game state\n");
+                        }
+                        else if (status == -2) {
+                            fprintf(stderr, "sendAnnounce: Empty game\n");
+                        }
+                        else if (status == -3) {
+                            fprintf(stderr, "sendAnnounce: Send error\n");
+                        }
 
                         // Clear the descriptor from the master set
                         FD_CLR(i, &master);
@@ -302,6 +316,7 @@ int main(void) {
                         pthread_cancel(gamestate_thread);
                         pthread_join(gamestate_thread, NULL);
                         free(sendbuf);
+                        free(recvbuf);
                         printf("Exiting...\n");
                         return 0;
                     }

@@ -14,7 +14,7 @@
 #include "typedefs.h"
 
 #define MAXDATASIZE 128
-#define G_INTERVAL 1
+#define G_INTERVAL_USEC 100000
 
 void* sendGamestate(void* ctx) {
 
@@ -29,7 +29,7 @@ void* sendGamestate(void* ctx) {
     while(1) {
 
         // Thread keeps sending the updates with G_INTERVAL seconds interval
-        sleep(G_INTERVAL);
+        usleep(G_INTERVAL_USEC);
 
         // Clear the send buffer
         memset(sendbuf, 0, MAXDATASIZE);
@@ -46,7 +46,7 @@ void* sendGamestate(void* ctx) {
             continue;
         }
         else if (status == -2) {
-            fprintf(stderr, "Thread: Empty game\n");
+            // fprintf(stderr, "Thread: Empty game\n");
             pthread_mutex_unlock(c->lock);
             continue;
         }

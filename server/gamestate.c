@@ -6,7 +6,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <sys/socket.h>
 
 #include "gamestate.h"
 #include "server.h" 
@@ -223,44 +222,6 @@ int parseGamestate(Gamestate* g, void* s, int len) {
 
     // Done
     return i;
-}
-
-// Sends announcement to all players
-int sendAnnounce(Gamestate* g, char* msg, size_t len, ID id) {
-
-    // If gamestate NULL
-    if (!g)
-        return -1;
-
-    // Linked-list is empty
-    if (g->next == NULL)
-        return -2;
-
-    // First element does not contain player
-    g = g->next;
-
-    // Allocate memory for message
-    char* data = malloc(sizeof(char)*(len + 15));
-    memset(data, 0, len+15);
-
-    // Parse announcement
-    sprintf(data, "%c%s%s", 'C', msg, " joined game!");
-
-    // Send announcement to all players
-    while (g != NULL) {
-        if (g->id == id) {
-            g = g->next;
-            continue;
-        }
-        if (send(g->sock, data, len+14, 0) < 0) {
-            perror("send error");
-            return -3;
-        }
-        g = g->next;
-    }
-    // Free memory and return
-    free(data);
-    return 0;
 }
 
 // Terminates the Gamestate instance
