@@ -19,6 +19,9 @@ int createMap(Mapdata *map_data, int mapfile) {
     case 1:
 	map_path = "../maps/square.map";
 	break;
+    case 2:
+	map_path = "../maps/split.map";
+	break;
     default:
 	printf("Bad map number given\n");
 	return -1;
@@ -70,6 +73,7 @@ int createMap(Mapdata *map_data, int mapfile) {
     return 0;
 }
 
+//Free memory reserved by createMap
 void freeMap(void *arg) {
     int i = 0;
     Mapdata *map_data = arg;
@@ -80,4 +84,15 @@ void freeMap(void *arg) {
     }
     free(rows);
     return;
+}
+
+//Check for a wall from Mapdata struct created by createMap. Return 0 for no map
+int checkWall(Mapdata *map_data, Coord c) {
+    int x = c.x;
+    int y = c.y;
+    //Check for walls
+    if(map_data->map[y][x] == '#') {
+        return 1;
+    }
+    return 0;
 }
