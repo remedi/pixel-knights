@@ -24,6 +24,7 @@ struct context_s {
     int* sock;
     pthread_mutex_t* lock;
     volatile sig_atomic_t* done;
+    int *main_exit;
 };
 
 // Thread cleanup handler

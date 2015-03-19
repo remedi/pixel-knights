@@ -25,7 +25,6 @@ void free_memory(void *ptr) {
     free(ptr);
 }
 
-
 // Add the new message contained in buf to the msg_array.
 // Also rotate pointers to make the newest message show as first.
 char **new_message(char *buf, char **msg_array, int msg_count) {
@@ -106,6 +105,7 @@ void *updateMap(void *ctx) {
     char **rows;
     char **message_array;
     int message_count;
+    int *exit_clean = c->main_exit;
 
     // Initialize mapdata
     if(createMap(&map_data, 1) == -1) {
@@ -126,13 +126,10 @@ void *updateMap(void *ctx) {
     memset(buf, '\0', BUFLEN);
 
     //Cleanup handlers for thread cancellation
-    pthread_cleanup_push(free_memory, buf);
-
     printf("thread: Reading socket %d\n", *sock_t);
-    while(break_flag) {
+    while(break_flag && ! *exit_clean) {
         // This cleanup handler needs to be set again for each loop
         // in case the address of 'players' is changed.
-        pthread_cleanup_push(free_memory, players);
         bytes = read(*sock_t, buf, BUFLEN);
         if(bytes < 0) {
             perror("read");
@@ -193,22 +190,18 @@ void *updateMap(void *ctx) {
             pthread_mutex_unlock(c->lock);
         }
         memset(buf, '\0', BUFLEN);
-        pthread_cleanup_pop(0);
     }
+
+    free_memory(buf);
+    freeMap(&map_data);
+    //free_memory(players);
     // Free memory allocated for messages
     for(i = 0; i<message_count; i++) {
         free(message_array[i]);
     }
     free(message_array);
 
-    // Free memory allocated for map
-    for(i = 0; i<map_data.height; i++) {
-        free(rows[i]);
-    }
-    free(rows);
-
     *c->done = 1;
-    pthread_cleanup_pop(1);
     free(players);
     printf("thread: Server hung up unexpectedly, exiting\n");
     return 0;

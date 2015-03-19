@@ -177,6 +177,7 @@ int main(int argc, char *argv[]) {
     ctx.sock = &sock;
     ctx.lock = &mtx;
     ctx.done = &thread_complete; 
+    ctx.main_exit = &exit_clean;
     if(pthread_create(&thread, NULL, updateMap, &ctx) < 0) {
         perror("main, pthread_create");
     }
@@ -201,6 +202,7 @@ int main(int argc, char *argv[]) {
             buffer[0] = 'Q';
             memcpy(buffer+1, &my_id, 1);
             write(sock, buffer, 2);
+	    exit_clean = 1;
             break;
         }
         else if(input_char == 'h') {
@@ -225,10 +227,6 @@ int main(int argc, char *argv[]) {
     }
 
     //Perform cleanup:
-    printf("main: Canceling map update thread\n");
-    if(pthread_cancel(thread) != 0) {
-        perror("pthread_cancel");
-    }
     printf("main: Waiting for map update thread to exit\n");
     if(pthread_join(thread, NULL) < 0) {
         perror("pthread_join");
