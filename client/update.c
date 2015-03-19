@@ -10,6 +10,7 @@
 #include <pthread.h>
 #include <unistd.h>
 
+#include "../maps/maps.h"
 #include "client.h"
 #include "update.h"
 
@@ -41,7 +42,8 @@ char **new_message(char *buf, char **msg_array, int msg_count) {
     return msg_array;
 }
 
-//This function is called when G message is received. Parse game status from a character string received from the server.
+// This function is called when G message is received.
+// Parse game status from a character string received from the server.
 Playerdata *initGame(char *buf, Gamedata *game_data, Mapdata map_data) {
     buf++;
     int i;
@@ -106,13 +108,11 @@ void *updateMap(void *ctx) {
     int message_count;
 
     // Initialize mapdata
-    map_data.height = MAP_HEIGHT;
-    map_data.width = MAP_WIDTH;
-    rows = createMap(&map_data);
-    if(rows == NULL) {
-        printf("thread: createMap error");
-        exit(-1);
+    if(createMap(&map_data, 1) == -1) {
+	printf("thread: error with createMap\n");
+	exit(EXIT_FAILURE);
     }
+    rows = map_data.map;
 
     //Reserve memory for chat service
     message_count = MAP_HEIGHT;
@@ -130,7 +130,8 @@ void *updateMap(void *ctx) {
 
     printf("thread: Reading socket %d\n", *sock_t);
     while(break_flag) {
-        //This cleanup handler needs to be set again for each loop, in case the address of 'players' is changed.
+        // This cleanup handler needs to be set again for each loop
+        // in case the address of 'players' is changed.
         pthread_cleanup_push(free_memory, players);
         bytes = read(*sock_t, buf, BUFLEN);
         if(bytes < 0) {
@@ -143,9 +144,7 @@ void *updateMap(void *ctx) {
         }
         else if(buf[0] == 'C') {
             printf("thread: Got C message\n");
-            buf++;
-            new_message(buf, message_array, message_count);
-            buf--;
+            new_message(buf+1, message_array, message_count);
         }
         else if(buf[0] == 'G') {
             if((bytes - 2) % 4 != 0) {

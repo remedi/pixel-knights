@@ -15,6 +15,7 @@
 #include <sys/stat.h>
 #include <sys/un.h>
 
+#include "../maps/maps.h"
 #include "client.h"
 #include "update.h"
 
@@ -76,44 +77,6 @@ char *processCommand(char id, char input, char *buf) {
     return buf;
 }
 
-//Allocate memory for map. Initialize memory as map tiles. Return two-dimensional character array as the map.
-char **createMap(Mapdata *map_data) {
-    int height = map_data->height;
-    int width = map_data->width;
-    int i;
-
-    // Allocate memory for map
-    char **rows = malloc(sizeof(char *) * height);
-    if(rows == NULL) {
-        perror("drawMap, malloc");
-        return NULL;
-    }
-
-    //Allocate memory for each row and set initial tiles
-    for(i = 0; i<height; i++) {
-        rows[i] = malloc(sizeof(char) * width + 1);
-        if(rows[i] == NULL) {
-            perror("drawMap, malloc");
-            free(rows);
-            return NULL;
-        }
-        // Write spaces and an ending zero to each line
-        memset(rows[i], ' ', width-1);
-        rows[i][width] = '\0';
-    }
-
-    //Add top and bottom wall
-    memset(rows[0], '#', width);
-    memset(rows[height-1], '#', width);
-
-    //Add left and right walls
-    for(i = 0; i<height; i++) {
-        rows[i][0] = '#';
-        rows[i][width-1] = '#';
-    }
-
-    return rows;
-}
 
 int main(int argc, char *argv[]) {
     char input_char = 1;

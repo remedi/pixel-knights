@@ -181,19 +181,19 @@ int main(void) {
                         pthread_mutex_unlock(&lock);
 
                         if (status == -1) {
-                            fprintf(stderr, "movePlayer: Invalid game state\n");
+                            fprintf(stderr, "movePlayer %02x: Invalid game state\n", id);
                             continue;
                         }
                         else if (status == -2) {
-                            fprintf(stderr, "movePlayer: ID not found\n");
+                            fprintf(stderr, "movePlayer %02x: ID not found\n", id);
                             continue;
                         }
                         else if (status == -3) {
-                            fprintf(stderr, "movePlayer: Illegal move\n");
+                            fprintf(stderr, "movePlayer %02x: Illegal move\n", id);
                             continue;
                         }
                         else if (status == -4) {
-                            fprintf(stderr, "movePlayer: Action not found\n");
+                            fprintf(stderr, "movePlayer %02x: Action not found\n", id);
                             continue;
                         }
                     }
@@ -215,11 +215,11 @@ int main(void) {
                         pthread_mutex_unlock(&lock);
 
                         if (status == -1) {
-                            fprintf(stderr, "addPlayer: Invalid game state\n");
+                            fprintf(stderr, "addPlayer %02x: Invalid game state\n", id);
                             continue;
                         }
                         else if (status == -2) {
-                            fprintf(stderr, "addPlayer: ID conflict\n");
+                            fprintf(stderr, "addPlayer %02x: ID conflict\n", id);
                             continue;
                         }
                         sendbuf[0] = 'I';
@@ -237,16 +237,14 @@ int main(void) {
                         free(message);
                         if (status == -1) {
                             fprintf(stderr, "sendAnnounce: Invalid game state\n");
-                            continue;
                         }
                         else if (status == -2) {
                             fprintf(stderr, "sendAnnounce: Empty game\n");
-                            continue;
                         }
                         else if (status == -3) {
                             fprintf(stderr, "sendAnnounce: Send error\n");
-                            continue;
                         }
+                        printf("Player with id: %02x connected!\n", id);
                     }
 
                     // If the message starts with C the message is a Chat-message
@@ -275,22 +273,23 @@ int main(void) {
 
                         // Read ID from recvbuf and remove player
                         data = (uint8_t*) (recvbuf + 1);
+                        id = *data;
 
                         // Remove player and lock game state
                         pthread_mutex_lock(&lock);
-                        status = removePlayer(&game, *data);
+                        status = removePlayer(&game, id);
                         pthread_mutex_unlock(&lock);
 
                         if (status == -1) {
-                            fprintf(stderr, "removePlayer: Invalid game state\n");
+                            fprintf(stderr, "removePlayer %02x: Invalid game state\n", id);
                             continue;
                         }
                         else if (status == -2) {
-                            fprintf(stderr, "removePlayer: ID not found\n");
+                            fprintf(stderr, "removePlayer %02x: ID not found\n", id);
                             continue;
                         }
                         else
-                            printf("Player with id: %02x disconnected\n", *data);
+                            printf("Player with id: %02x disconnected!\n", id);
 
                         // Send disconnect announcement
                         status = sendAnnounce(&game, "CPlayer disconnected!", 21, 0); 
