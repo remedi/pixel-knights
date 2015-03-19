@@ -8,22 +8,16 @@
 // Returns the maximum of a and b
 int max(int, int);
 
-// Receive Action enum from client
-Action receiveAction(unsigned int);
-
-// Receive chat message from client
-char* receiveChatMessage(unsigned int);
-
-// Relay chat message to client
-int relayChatMessage(char*, unsigned int);
-
-// Listen for new connections
-int listenNewConnections(void);
-
 // Create new ID for new client connection
 ID createID(void);
 
-// Load map data to server
+// Check that the coordinate is valid 
+int checkCoordinate(int);
+
+// Sends announcement to all players except ID
+int sendAnnounce(Gamestate*, char*, size_t, ID);
+
+// TODO: Load map data to server
 int loadMap(FILE*);
 
 #endif

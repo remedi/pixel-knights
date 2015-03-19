@@ -11,13 +11,19 @@
 #include <unistd.h>
 
 #include "client.h"
-#include "local.h"
 #include "update.h"
 
 #define MAP_HEIGHT 10
 #define MAP_WIDTH 10
 #define BUFLEN 1000
 #define MSGLEN 40
+
+// Frees memory pointed by 'ptr'. Used as thread cleanup handler
+void free_memory(void *ptr) {
+    printf("thread: Freeing my memory\n");
+    free(ptr);
+}
+
 
 // Add the new message contained in buf to the msg_array.
 // Also rotate pointers to make the newest message show as first.

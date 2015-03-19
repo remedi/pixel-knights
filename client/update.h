@@ -1,6 +1,8 @@
 #ifndef UPDATE_H
 #define UPDATE_H
 
+#include <signal.h>
+
 // Context struct for thread
 struct context_s {
     int* sock;
@@ -8,6 +10,9 @@ struct context_s {
     volatile sig_atomic_t* done;
 };
 
+// Thread cleanup handler
+void free_memory(void *ptr);
+ 
 // Add the new message contained in buf to the msg_array.
 // Also rotate pointers to make the newest message show as first.
 char **new_message(char *buf, char **msg_array, int msg_count); 

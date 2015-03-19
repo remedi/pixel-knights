@@ -29,7 +29,7 @@ int main(void) {
     socklen_t socklen = sizeof(struct sockaddr);
     int status, listenfd, new_fd, fdmax, yes = 1;
     fd_set rdset, master;
-    char recvbuf[MAXDATASIZE];
+    char* recvbuf = malloc(MAXDATASIZE * sizeof(char));
     char* sendbuf = malloc(MAXDATASIZE * sizeof(char));
     char ipstr[INET_ADDRSTRLEN];
     ssize_t nbytes; 
@@ -106,7 +106,6 @@ int main(void) {
     struct context_s ctx;
     ctx.g = &game;
     ctx.lock = &lock;
-
     if (pthread_create(&gamestate_thread, NULL, sendGamestate, &ctx) < 0) {
         perror("pthread_create error");
         exit(EXIT_FAILURE);
@@ -131,8 +130,10 @@ int main(void) {
                 perror("accept error");
                 continue;
             }
-            // TODO: At this point we can print the address from where the connection came
-            printf("New connection accepted!\n");
+            // Print the address from where the connection came
+            inet_ntop(AF_INET, &((struct sockaddr_in*)&their_addr)->sin_addr,\
+                      recvbuf, INET_ADDRSTRLEN);
+            printf("New connection accepted from %s!\n", recvbuf);
 
             // Clear their_addr and socklen
             socklen = sizeof(struct sockaddr_storage);
@@ -179,10 +180,22 @@ int main(void) {
                         status = movePlayer(&game, id, a);
                         pthread_mutex_unlock(&lock);
 
-                        if (status == -1)
+                        if (status == -1) {
                             fprintf(stderr, "movePlayer: Invalid game state\n");
-                        else if (status == -2)
+                            continue;
+                        }
+                        else if (status == -2) {
                             fprintf(stderr, "movePlayer: ID not found\n");
+                            continue;
+                        }
+                        else if (status == -3) {
+                            fprintf(stderr, "movePlayer: Illegal move\n");
+                            continue;
+                        }
+                        else if (status == -4) {
+                            fprintf(stderr, "movePlayer: Action not found\n");
+                            continue;
+                        }
                     }
 
                     // If the message starts with H the message is a Hello-message
@@ -211,8 +224,27 @@ int main(void) {
                         }
                         sendbuf[0] = 'I';
                         memcpy(sendbuf + 1, &id, 1);
-                        if ((nbytes = send(i, sendbuf, 2, 0)) == -1) {
+                        if ((send(i, sendbuf, 2, 0)) == -1) {
                             perror("send error");
+                            continue;
+                        }
+
+                        // Send announcement to all players about new player
+                        char* message = malloc(sizeof(char)*(nbytes + 14));
+                        recvbuf[nbytes] = '\0';
+                        sprintf(message, "C%s joined game!", recvbuf+1);
+                        status = sendAnnounce(&game, message, strlen(message), id);
+                        free(message);
+                        if (status == -1) {
+                            fprintf(stderr, "sendAnnounce: Invalid game state\n");
+                            continue;
+                        }
+                        else if (status == -2) {
+                            fprintf(stderr, "sendAnnounce: Empty game\n");
+                            continue;
+                        }
+                        else if (status == -3) {
+                            fprintf(stderr, "sendAnnounce: Send error\n");
                             continue;
                         }
                     }
@@ -249,10 +281,28 @@ int main(void) {
                         status = removePlayer(&game, *data);
                         pthread_mutex_unlock(&lock);
 
-                        if (status == -1)
+                        if (status == -1) {
                             fprintf(stderr, "removePlayer: Invalid game state\n");
-                        else if (status == -2)
+                            continue;
+                        }
+                        else if (status == -2) {
                             fprintf(stderr, "removePlayer: ID not found\n");
+                            continue;
+                        }
+                        else
+                            printf("Player with id: %02x disconnected\n", *data);
+
+                        // Send disconnect announcement
+                        status = sendAnnounce(&game, "CPlayer disconnected!", 21, 0); 
+                        if (status == -1) {
+                            fprintf(stderr, "sendAnnounce: Invalid game state\n");
+                        }
+                        else if (status == -2) {
+                            fprintf(stderr, "sendAnnounce: Empty game\n");
+                        }
+                        else if (status == -3) {
+                            fprintf(stderr, "sendAnnounce: Send error\n");
+                        }
 
                         // Clear the descriptor from the master set
                         FD_CLR(i, &master);
@@ -262,9 +312,11 @@ int main(void) {
 
                     // Just to be able to remotely close the server...
                     else if (!strncmp(recvbuf, "KILL", 4)) {
-                        printPlayers(&game);
+                        freePlayers(&game);
                         pthread_cancel(gamestate_thread);
+                        pthread_join(gamestate_thread, NULL);
                         free(sendbuf);
+                        free(recvbuf);
                         printf("Exiting...\n");
                         return 0;
                     }

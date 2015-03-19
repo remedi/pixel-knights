@@ -8,6 +8,7 @@
 #include <string.h>
 
 #include "gamestate.h"
+#include "server.h" 
 
 // Adds player to the gamestate linked-list
 int addPlayer(Gamestate* g, ID id, Coord c, int sock, char sign) {
@@ -87,19 +88,35 @@ int movePlayer(Gamestate* g, ID id, Action a) {
     // Update coordinates
     switch(a) {
         case UP:
-            g->c.y--;
-            break;
+            if (checkCoordinate(g->c.y-1)) {
+                g->c.y--;
+                break;
+            }
+            else
+                return -3;
         case DOWN:
-            g->c.y++;
-            break;
+            if (checkCoordinate(g->c.y+1)) {
+                g->c.y++;
+                break;
+            }
+            else
+                return -3;
         case LEFT:
-            g->c.x--;
-            break;
+            if (checkCoordinate(g->c.x-1)) {
+                g->c.x--;
+                break;
+            }
+            else
+                return -3;
         case RIGHT:
-            g->c.x++;
-            break;
+            if (checkCoordinate(g->c.x+1)) {
+                g->c.x++;
+                break;
+            }
+            else
+                return -3;
         default:
-            break;
+            return -4;
     }
     return 0;
 }
@@ -205,4 +222,23 @@ int parseGamestate(Gamestate* g, void* s, int len) {
 
     // Done
     return i;
+}
+
+// Terminates the Gamestate instance
+void freePlayers(Gamestate* g) {
+
+    // If gamestate NULL
+    if (!g)
+        return;
+
+    // First element does not contain player
+    g = g->next;
+    
+    // Free all memory
+    Gamestate* tmp; 
+    while (g) {
+        tmp = g->next;
+        free(g);
+        g = tmp;
+    }
 }

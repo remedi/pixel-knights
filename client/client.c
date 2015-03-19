@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <signal.h>
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -14,8 +15,6 @@
 #include <sys/stat.h>
 #include <sys/un.h>
 
-#include "local.h"
-#include "../maps/maps.c"
 #include "client.h"
 #include "update.h"
 
@@ -77,6 +76,44 @@ char *processCommand(char id, char input, char *buf) {
     return buf;
 }
 
+//Allocate memory for map. Initialize memory as map tiles. Return two-dimensional character array as the map.
+char **createMap(Mapdata *map_data) {
+    int height = map_data->height;
+    int width = map_data->width;
+    int i;
+
+    // Allocate memory for map
+    char **rows = malloc(sizeof(char *) * height);
+    if(rows == NULL) {
+        perror("drawMap, malloc");
+        return NULL;
+    }
+
+    //Allocate memory for each row and set initial tiles
+    for(i = 0; i<height; i++) {
+        rows[i] = malloc(sizeof(char) * width + 1);
+        if(rows[i] == NULL) {
+            perror("drawMap, malloc");
+            free(rows);
+            return NULL;
+        }
+        // Write spaces and an ending zero to each line
+        memset(rows[i], ' ', width-1);
+        rows[i][width] = '\0';
+    }
+
+    //Add top and bottom wall
+    memset(rows[0], '#', width);
+    memset(rows[height-1], '#', width);
+
+    //Add left and right walls
+    for(i = 0; i<height; i++) {
+        rows[i][0] = '#';
+        rows[i][width-1] = '#';
+    }
+
+    return rows;
+}
 
 int main(int argc, char *argv[]) {
     char input_char = 1;
@@ -172,8 +209,6 @@ int main(int argc, char *argv[]) {
         exit(EXIT_FAILURE);
     }
 
-    //Start the thread
-    if(pthread_create(&thread, NULL, updateMap, &sock) < 0) {
     // Fill the thread context struct and start the thread for updating map
     struct context_s ctx;
     ctx.sock = &sock;

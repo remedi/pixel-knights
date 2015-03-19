@@ -29,4 +29,7 @@ int printPlayers(Gamestate*);
 // Parses the data that gets sent to the players
 int parseGamestate(Gamestate*, void*, int);
 
+// Terminates the Gamestate instance
+void freePlayers(Gamestate*);
+
 #endif
