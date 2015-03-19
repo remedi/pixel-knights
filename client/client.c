@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <signal.h>
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -15,7 +16,6 @@
 #include <sys/un.h>
 
 #include "client.h"
-#include "local.h"
 #include "update.h"
 
 #define BUFLEN 1000
