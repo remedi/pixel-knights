@@ -11,7 +11,6 @@
 
 #include "gamestate.h"
 #include "thread.h"
-#include "typedefs.h"
 
 #define MAXDATASIZE 128
 #define G_INTERVAL_USEC 100000
@@ -20,7 +19,7 @@ void* sendGamestate(void* ctx) {
 
     // Init variables
     char sendbuf[MAXDATASIZE];
-    struct context_s* c = (struct context_s*) ctx;
+    Contex_server_thread* c = (Contex_server_thread *) ctx;
     Gamestate* g = c->g;
     Gamestate* game = g;
     int status, nbytes;

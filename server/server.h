@@ -3,7 +3,7 @@
 
 #include <stdio.h>
 
-#include "typedefs.h"
+#include "../typedefs.h"
 
 // Returns the maximum of a and b
 int max(int, int);

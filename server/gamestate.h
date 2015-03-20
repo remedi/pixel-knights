@@ -4,7 +4,7 @@
 #include <inttypes.h>
 
 #include "../maps/maps.h"
-#include "typedefs.h"
+#include "../typedefs.h"
 
 // Adds player to the gamestate linked-list
 int addPlayer(Gamestate*, ID, Coord, int, char);

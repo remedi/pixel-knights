@@ -2,30 +2,7 @@
 #define UPDATE_H
 
 #include <signal.h>
-
-typedef struct playerdata {
-  char name[10];
-  uint8_t id;
-  uint8_t x_coord;
-  uint8_t y_coord;
-  uint8_t hp;
-  uint8_t sign;
-} Playerdata;
-
-typedef struct gamedata {
-  uint8_t player_count;
-  uint8_t monster_count;
-  Playerdata *players;
-} Gamedata;
-
-
-// Context struct for thread
-struct context_s {
-    int* sock;
-    pthread_mutex_t* lock;
-    volatile sig_atomic_t* done;
-    int *main_exit;
-};
+#include "../typedefs.h"
 
 // Thread cleanup handler
 void free_memory(void *);

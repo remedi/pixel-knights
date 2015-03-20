@@ -6,17 +6,14 @@
 // ID is 8 bits long unsigned integer
 typedef uint8_t ID;
 
-/* This struct is moved to maps.h:
-// Coordinate struct
+typedef struct gamestate_s Gamestate;
+
 typedef struct coodinate_s {
 	uint8_t x;
 	uint8_t y;
-} Coord;
-*/
+}Coord;
 
-typedef struct gamestate_s Gamestate;
-
-// Gamedata structure is a linked list
+// Gamedata structure is a linked list (server side)
 struct gamestate_s {
 	ID id;
     Coord c;
@@ -24,6 +21,7 @@ struct gamestate_s {
     int sock;
     Gamestate* next;
 };
+
 
 // Action enumeration
 typedef enum {
@@ -34,5 +32,12 @@ typedef enum {
 	ATTACK,
 	SHOOT
 } Action;
+
+typedef struct mapdata {
+  uint8_t height;
+  uint8_t width;
+  char **map;
+}Mapdata;
+
 
 #endif

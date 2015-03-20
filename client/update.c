@@ -92,7 +92,7 @@ Playerdata *initGame(char *buf, Gamedata *game_data, Mapdata map_data) {
 // and to draw the game on the terminal
 void *updateMap(void *ctx) {
     Gamedata game;
-    struct context_s* c = (struct context_s*) ctx;
+    Contex_client_thread* c = (Contex_client_thread *) ctx;
     int *sock_t = c->sock;
     Playerdata *players = malloc(sizeof(Playerdata));
     Mapdata map_data;

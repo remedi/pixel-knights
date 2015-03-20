@@ -2,17 +2,7 @@
 #define MAPS_H
 
 #include <stdint.h>
-
-typedef struct mapdata {
-  uint8_t height;
-  uint8_t width;
-  char **map;
-}Mapdata;
-
-typedef struct coodinate_s {
-	uint8_t x;
-	uint8_t y;
-}Coord;
+#include "../typedefs.h"
 
 //Reserve memory for map and initialize tiles, return pointer for the reserved memory
 int createMap(Mapdata *, int);

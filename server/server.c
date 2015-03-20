@@ -7,7 +7,6 @@
 
 #include "../maps/maps.h"
 #include "server.h"
-#include "typedefs.h"
 
 // Returns the maximum of a and b
 int max(int a, int b) {

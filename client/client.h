@@ -1,15 +1,7 @@
 #ifndef CLIENT_H
 #define CLIENT_H
 
-
-typedef enum {
-	UP,
-	DOWN,
-	RIGHT,
-	LEFT,
-	ATTACK,
-	SHOOT
-} Action;
+#include "../typedefs.h"
 
 // Functions:
 
