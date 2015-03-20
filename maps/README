@@ -1,0 +1,25 @@
+Map file format:
+
+<width_byte><height_byte><new_line>
+<map_tile><map_tile>...width...<map_tile><new_line>
+<map_tile><map_tile>...width...<map_tile><new_line>
+......height.........
+<map_tile><map_tile>...width...<map_tile><new_line>
+
+
+Adding map to the program:
+
+Add new number (and other things) to the switch in the beginning of maps.c:
+
+    case <NEXT_NUMBER>:
+	map_path = "../maps/<YOUR_MAP_FILE>";
+	break;
+
+
+Then this number can be called from client and server.
+
+
+
+There are two example maps from which the map file format can be recapped.
+
+Map related functions are described in maps.h
