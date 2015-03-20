@@ -19,6 +19,9 @@ Add new number (and other things) to the switch in the beginning of maps.c:
 Then this number can be called from client and server.
 
 
+Info:
+
+Players are currently starting in coords (1, 1) so this tile should be free and accessible.
 
 There are two example maps from which the map file format can be recapped.
 
