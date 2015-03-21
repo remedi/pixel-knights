@@ -40,11 +40,26 @@ struct sockaddr_in ipv4_parser(char *ip, char *port) {
 char getInput(char *buffer) {
     char character;
     char buf[40];
+    struct termios term_settings, old_settings;
     character = getchar();
     if(character == 'c') {
         pthread_mutex_lock(&mtx);
         printf("\nEnter max 40 bytes message: ");
+	//Enable echo:
+	if(tcgetattr(STDIN_FILENO, &term_settings) == -1) {
+	    perror("tcgetattr");
+	}
+	memset(&old_settings, 0, sizeof(struct termios));
+	old_settings = term_settings;
+	term_settings.c_lflag = (term_settings.c_lflag | ECHO);
+	term_settings.c_lflag = (term_settings.c_lflag | ICANON);
+	if(tcsetattr(STDIN_FILENO, TCSANOW, &term_settings) == -1) {
+	    perror("main, tcsetattr");
+	}
         fgets(buf, 40, stdin);
+	if(tcsetattr(STDIN_FILENO, TCSANOW, &old_settings) == -1) {
+	    perror("main, tcsetattr");
+	}
         //Remove last newline:
         sprintf(buffer, "%s", buf);
         pthread_mutex_unlock(&mtx);
