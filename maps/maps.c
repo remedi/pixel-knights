@@ -10,12 +10,12 @@
 #include "maps.h"
 
 //Allocate memory for map. Initialize memory as map tiles. Return two-dimensional character array as the map.
-int createMap(Mapdata *map_data, int mapfile) {
+int createMap(Mapdata *map_data, int map_nr) {
     int width = 0, height = 0;
     int fd, i;
     char *map_path;
 
-    switch(mapfile) {
+    switch(map_nr) {
     case 1:
 	map_path = "../maps/square.map";
 	break;
@@ -23,8 +23,9 @@ int createMap(Mapdata *map_data, int mapfile) {
 	map_path = "../maps/split.map";
 	break;
     default:
-	printf("Bad map number given\n");
-	return -1;
+	map_path = "../maps/square.map";
+	map_nr = 1;
+	break;
     }
 
     fd = open(map_path, O_RDONLY);
@@ -70,6 +71,7 @@ int createMap(Mapdata *map_data, int mapfile) {
     map_data->height = height;
     map_data->width = width;
     map_data->map = rows;
+    map_data->map_nr = map_nr;
     return 0;
 }
 

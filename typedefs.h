@@ -10,13 +10,13 @@ typedef uint8_t ID;
 typedef struct gamestate_s Gamestate;
 
 typedef struct coodinate_s {
-	uint8_t x;
-	uint8_t y;
+    uint8_t x;
+    uint8_t y;
 }Coord;
 
 // Gamedata structure is a linked list (server side)
 struct gamestate_s {
-	ID id;
+    ID id;
     Coord c;
     char sign;
     int sock;
@@ -25,29 +25,31 @@ struct gamestate_s {
 
 //Playerdata on client side. These are about to be removed
 typedef struct playerdata {
-  char name[10];
-  uint8_t id;
-  uint8_t x_coord;
-  uint8_t y_coord;
-  uint8_t hp;
-  uint8_t sign;
+    char name[10];
+    uint8_t id;
+    uint8_t x_coord;
+    uint8_t y_coord;
+    uint8_t hp;
+    uint8_t sign;
 } Playerdata;
 
 typedef struct gamedata {
-  uint8_t player_count;
-  uint8_t monster_count;
-  Playerdata *players;
+    uint8_t player_count;
+    uint8_t monster_count;
+    Playerdata *players;
 } Gamedata;
 
 
-// Context structs for thread
+// Context structs for client thread
 typedef struct contex_server {
     int* sock;
     pthread_mutex_t* lock;
     volatile sig_atomic_t* done;
     int *main_exit;
+    char *map_nr;
 }Contex_client_thread;
 
+// Context structs for server thread
 typedef struct contex_client {
     Gamestate* g;
     pthread_mutex_t* lock;
@@ -55,18 +57,19 @@ typedef struct contex_client {
 
 // Action enumeration
 typedef enum {
-	UP,
-	DOWN,
-	RIGHT,
-	LEFT,
-	ATTACK,
-	SHOOT
+    UP,
+    DOWN,
+    RIGHT,
+    LEFT,
+    ATTACK,
+    SHOOT
 } Action;
 
 typedef struct mapdata {
-  uint8_t height;
-  uint8_t width;
-  char **map;
+    uint8_t height;
+    uint8_t width;
+    uint8_t map_nr;
+    char **map;
 }Mapdata;
 
 
