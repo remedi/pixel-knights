@@ -94,6 +94,7 @@ void *updateMap(void *ctx) {
     Gamedata game;
     Contex_client_thread* c = (Contex_client_thread *) ctx;
     int *sock_t = c->sock;
+    char *map_nr = c->map_nr;
     Playerdata *players = malloc(sizeof(Playerdata));
     Mapdata map_data;
     game.players = players;
@@ -108,7 +109,7 @@ void *updateMap(void *ctx) {
     int *exit_clean = c->main_exit;
 
     // Initialize mapdata
-    if(createMap(&map_data, 2) == -1) {
+    if(createMap(&map_data, *map_nr) == -1) {
 	printf("thread: error with createMap\n");
 	exit(EXIT_FAILURE);
     }

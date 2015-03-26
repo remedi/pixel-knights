@@ -22,13 +22,14 @@
 #define PORT "4375"
 #define BACKLOG 10
 
-int main(void) {
+int main(int argc, char *argv[]) {
 
     // Declare variables
     struct addrinfo* results, hints, *i;
     struct sockaddr_storage their_addr;
     socklen_t socklen = sizeof(struct sockaddr);
     int status, listenfd, new_fd, fdmax, yes = 1;
+    char map_nr = 1;
     fd_set rdset, master;
     char* recvbuf = malloc(MAXDATASIZE * sizeof(char));
     char* sendbuf = malloc(MAXDATASIZE * sizeof(char));
@@ -51,10 +52,16 @@ int main(void) {
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_flags = AI_PASSIVE;
 
-    if(createMap(&mapdata, 2) != 0) {
-	printf("Error creating map\n");
+    //If player has defined map number (otherwise default is 1):
+    if(argc == 2) {
+	map_nr = strtol(argv[1], NULL, 10);
+    }
+    if(createMap(&mapdata, map_nr) != 0) {
+	printf("Error creating map.\n");
 	exit(EXIT_FAILURE);
     }
+
+
 
     // Try to get addrinfo, exiting on error
     if ((status = getaddrinfo(NULL, PORT, &hints, &results)) != 0) {
@@ -105,7 +112,7 @@ int main(void) {
     // Set the listen socket to the master set
     FD_SET(listenfd, &master);
 
-    printf("Server initialized!\nServer IP: %s\nWaiting for connections...\n", ipstr);
+    printf("Server initialized!\nServer IP: %s\nServer port: %s\nWaiting for connections...\n", ipstr, PORT);
 
     // Initiate thread that keeps sending the clients the game state
     pthread_mutex_t lock;
@@ -231,7 +238,8 @@ int main(void) {
                         }
                         sendbuf[0] = 'I';
                         memcpy(sendbuf + 1, &id, 1);
-                        if ((send(i, sendbuf, 2, 0)) == -1) {
+			memcpy(sendbuf + 2, &map_nr, 1);
+                        if ((send(i, sendbuf, 3, 0)) == -1) {
                             perror("send error");
                             continue;
                         }
