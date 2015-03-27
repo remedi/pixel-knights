@@ -16,11 +16,15 @@
 #include "server.h"
 
 
-int connectMM(char *IP, char *port, char map_nr) {
+int connectMM(char *IP, char *port, char map_nr, struct sockaddr_in *this_IP) {
     int sock;
     struct sockaddr_in sock_addr_in;
     char new_server[2];
     char *buf = malloc(10);
+    socklen_t this_IP_len;
+
+    this_IP_len = sizeof(struct sockaddr_in);
+
 
     memset(buf, '\0', 10);
 
@@ -47,22 +51,31 @@ int connectMM(char *IP, char *port, char map_nr) {
 	return -1;
     }
     printf("Connection succeeded. Sending server information..\n");
+    //Send server information
     if(write(sock, new_server, 2) == -1) {
 	perror("write");
 	return -1;
     }
+    //Wait for ok reply
     if(read(sock, buf, 1) == -1) {
 	perror("write");
 	return -1;
     }
+
     if(buf[0] == 'O') {
 	printf("Got succesful acknowledgement from mm server\n");
-	return 0;
     }
     else {
 	printf("Error when communicatin with mm server\n");
 	return -1;
     }
+    //Get own address
+    if(getsockname(sock, (struct sockaddr *) this_IP, &this_IP_len) == -1) {
+	perror("getsockname");
+	return -1;
+    }
+
+    return 0;
 }
 
 // Returns the maximum of a and b

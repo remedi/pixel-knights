@@ -2,6 +2,7 @@
 #define SERVER_H
 
 #include <stdio.h>
+#include <netinet/in.h>
 
 #include "../typedefs.h"
 
@@ -18,6 +19,6 @@ int checkCoordinate(int);
 int sendAnnounce(Gamestate*, char*, size_t, ID);
 
 //Announce map server to match making server
-int connectMM(char *, char *, char);
+int connectMM(char *, char *, char, struct sockaddr_in*);
 
 #endif
