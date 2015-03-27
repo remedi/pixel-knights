@@ -72,20 +72,20 @@ char *processCommand(char id, char input, char *buf) {
     Action a; 
     memset(buf, '\0', BUFLEN);
     switch(input) {
-        case 'w':
-            a = UP;
-            break;
-        case 's':
-            a = DOWN;
-            break;
-        case 'a':
-            a = LEFT;
-            break;
-        case 'd':
-            a = RIGHT;
-            break;
-        default:
-            return NULL;
+    case 'w':
+	a = UP;
+	break;
+    case 's':
+	a = DOWN;
+	break;
+    case 'a':
+	a = LEFT;
+	break;
+    case 'd':
+	a = RIGHT;
+	break;
+    default:
+	return NULL;
     }
     sprintf(buf, "A%c", id);
     memcpy(buf+2, &a, 1);
@@ -114,11 +114,11 @@ int main(int argc, char *argv[]) {
             perror("fgets");
         }
 	if(strlen(my_name) == 1) {
-	  strcpy(my_name, "Default");
+	    strcpy(my_name, "Default");
 	}
 	else {
-	  //Remove last newline:
-	  my_name[strlen(my_name)-1] = '\0';
+	    //Remove last newline:
+	    my_name[strlen(my_name)-1] = '\0';
 	}
     }
     else {
@@ -154,64 +154,64 @@ int main(int argc, char *argv[]) {
     }
 
     while(!exit_clean) {
-      //Setup socket
-      printf("main: Initializing netgame\n");
-      sock = socket(AF_INET, SOCK_STREAM, 0);
-      if(sock < 0) {
-        perror("socket");
-      }
-      memset(&sock_addr_in, 0, sizeof(struct sockaddr_in));
-      if(argc == 3) {
-	sock_addr_in = ipv4_parser(argv[1], argv[2]);
-      }
-      else {
-	sock_addr_in = ipv4_parser("localhost", argv[1]);
-      }
-      sock_addr_in.sin_family = AF_INET;
-      //Connect to the socket
-      printf("main: Connecting to server..\n");
-      if(connect(sock, (struct sockaddr *) &sock_addr_in, sizeof(sock_addr_in)) == -1) {
-        perror("main, connect");
-	printf("Exiting since connection failed\n");
-        exit_clean = 1;
-      }
-      if(!exit_clean) {
-	//Send hello message to server
-	memset(buffer, '\0', BUFLEN);
-	sprintf(buffer, "H%s", my_name);
-	printf("main: Sending 'hello' message to the server: %s\n", buffer);
-	if(write(sock, buffer, strlen(buffer) + 1) < 1) {
-	  perror("main, write");
-	  exit_clean = 1;
+	//Setup socket
+	printf("main: Initializing netgame\n");
+	sock = socket(AF_INET, SOCK_STREAM, 0);
+	if(sock < 0) {
+	    perror("socket");
 	}
-	memset(buffer, '\0', BUFLEN);
-	if(read(sock, buffer, BUFLEN) < 1) {
-	  perror("main, read");
-	  exit_clean = 1;
-	}
-	if(buffer[0] == 'I') {
-	  //Receive ID message
-	  printf("main: Received my id: %d\n", buffer[1]);
-	  my_id = buffer[1];
-	  map_nr = buffer[2];
-	  break;
-	}
-	else if(buffer[0] == 'M') {
-	  printf("main: Received redirection order\n");
-	  strtok(buffer, " ");
-	  //Use these pointers again. We are going another loop inside while.
-	  argv[1] = strtok(NULL, " ");
-	  argv[2] = strtok(NULL, " ");
-	  argc = 3;
-	  //redir_port = strtok(NULL, " ");
-	  //ipv4_parser(redir_ip, redir_port);
+	memset(&sock_addr_in, 0, sizeof(struct sockaddr_in));
+	if(argc == 3) {
+	    sock_addr_in = ipv4_parser(argv[1], argv[2]);
 	}
 	else {
-	  printf("Unexpected message from server: %s\n", buffer);
-	  //exit(EXIT_FAILURE);
-	  exit_clean = 1;
+	    sock_addr_in = ipv4_parser("localhost", argv[1]);
 	}
-      }
+	sock_addr_in.sin_family = AF_INET;
+	//Connect to the socket
+	printf("main: Connecting to server..\n");
+	if(connect(sock, (struct sockaddr *) &sock_addr_in, sizeof(sock_addr_in)) == -1) {
+	    perror("main, connect");
+	    printf("Exiting since connection failed\n");
+	    exit_clean = 1;
+	}
+	if(!exit_clean) {
+	    //Send hello message to server
+	    memset(buffer, '\0', BUFLEN);
+	    sprintf(buffer, "H%s", my_name);
+	    printf("main: Sending 'hello' message to the server: %s\n", buffer);
+	    if(write(sock, buffer, strlen(buffer) + 1) < 1) {
+		perror("main, write");
+		exit_clean = 1;
+	    }
+	    memset(buffer, '\0', BUFLEN);
+	    if(read(sock, buffer, BUFLEN) < 1) {
+		perror("main, read");
+		exit_clean = 1;
+	    }
+	    if(buffer[0] == 'I') {
+		//Receive ID message
+		printf("main: ID message: ID: %d Map nr: %d\n", buffer[1], buffer[2]);
+		my_id = buffer[1];
+		map_nr = buffer[2];
+		break;
+	    }
+	    else if(buffer[0] == 'M') {
+		printf("main: Received redirection order\n");
+		strtok(buffer, " ");
+		//Use these pointers again. We are going another loop inside while.
+		argv[1] = strtok(NULL, " ");
+		argv[2] = strtok(NULL, " ");
+		argc = 3;
+		//redir_port = strtok(NULL, " ");
+		//ipv4_parser(redir_ip, redir_port);
+	    }
+	    else {
+		printf("Unexpected message from server: %s\n", buffer);
+		//exit(EXIT_FAILURE);
+		exit_clean = 1;
+	    }
+	}
     }
 
     // Fill the thread context struct and start the thread for updating map

@@ -56,12 +56,18 @@ int main(int argc, char *argv[]) {
     if(argc == 2) {
 	map_nr = strtol(argv[1], NULL, 10);
     }
+    //Create map
     if(createMap(&mapdata, map_nr) != 0) {
 	printf("Error creating map.\n");
 	exit(EXIT_FAILURE);
     }
-
-
+    //Announce this server to MM server, if user has given map_nr, ip and port
+    if(argc == 4) {
+	map_nr = strtol(argv[1], NULL, 10);
+	if(connectMM(argv[2], argv[3], map_nr) != 0) {
+	    printf("Error when announcing this server to MM server\n");
+	}
+    }
 
     // Try to get addrinfo, exiting on error
     if ((status = getaddrinfo(NULL, PORT, &hints, &results)) != 0) {

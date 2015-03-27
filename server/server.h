@@ -17,7 +17,7 @@ int checkCoordinate(int);
 // Sends announcement to all players except ID
 int sendAnnounce(Gamestate*, char*, size_t, ID);
 
-// TODO: Load map data to server
-int loadMap(FILE*);
+//Announce map server to match making server
+int connectMM(char *, char *, char);
 
 #endif
