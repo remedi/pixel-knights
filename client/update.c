@@ -111,7 +111,6 @@ void *updateMap(void *ctx) {
     // Initialize mapdata
     if(createMap(&map_data, *map_nr) == -1) {
 	printf("thread: error with createMap\n");
-	exit(EXIT_FAILURE);
     }
     rows = map_data.map;
 
