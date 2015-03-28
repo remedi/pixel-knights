@@ -70,7 +70,7 @@ int main(int argc, char *argv[]) {
 	if(connectMM(argv[2], argv[3], map_nr, &my_IP) != 0) {
 	    printf("Error when announcing this server to MM server\n");
 	}
-	my_IP.sin_port = htons(4375);
+	//my_IP.sin_port = htonl(my_IP.sin_port);
 	//my_IP.sin_family = AF_INET;
 	//Create public IP socket
 	if ((listenfd = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
@@ -81,14 +81,17 @@ int main(int argc, char *argv[]) {
 	    perror("setsockopt");
 	    exit(EXIT_FAILURE);
 	}
+	//Sleep to be sure the previous socket was closed. We are using that port again now:
+	sleep(1);
 	if (bind(listenfd, (struct sockaddr *) &my_IP, sizeof(my_IP)) == -1) {
 	    perror("bind");
 	    printf("Errno: %d\n", errno);
 	    exit(EXIT_FAILURE);
 	}
 	inet_ntop(AF_INET, (void *) &my_IP.sin_addr, ipstr, INET_ADDRSTRLEN);
-	printf("Server Port: %d\n", ntohs(my_IP.sin_port));
-	
+	//printf("Server Port: %d\n", ntohs(my_IP.sin_port));
+	printf("My port host order: %d network order: %d\n", my_IP.sin_port, ntohs(my_IP.sin_port));
+
     }
     // Create local socket
     else {
@@ -122,7 +125,7 @@ int main(int argc, char *argv[]) {
 	inet_ntop(i->ai_family, &((struct sockaddr_in*)i->ai_addr)->sin_addr, ipstr, INET_ADDRSTRLEN);
 	// We don't need this anymore
 	freeaddrinfo(results);
-	printf("Server Port: %s", PORT);
+	printf("Server Port: %s\n", PORT);
     }
    
 

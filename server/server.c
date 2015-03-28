@@ -74,6 +74,9 @@ int connectMM(char *IP, char *port, char map_nr, struct sockaddr_in *this_IP) {
 	perror("getsockname");
 	return -1;
     }
+    if(close(sock) == -1) {
+	perror("MM socket, close");
+    }
 
     return 0;
 }
