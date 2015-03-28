@@ -17,11 +17,15 @@ def getOwnAddr():
   googleAddr = googleAddr[-1][-1]
   #print "Connecting to google server:", googleAddr
   #Connect to google server
-  ownAddr = socket.create_connection(googleAddr)
-  #Retrieve own IP
-  my_IP = ownAddr.getsockname()[0]
-  print "Retrieved own IP: ", my_IP
-  ownAddr.close()
+  try:
+    ownAddr = socket.create_connection(googleAddr, 5)
+    #Retrieve own IP
+    my_IP = ownAddr.getsockname()[0]
+    ownAddr.close()
+    print "Retrieved own IP: ", my_IP
+  except socket.timeout:
+    print "No connection, creating localserver"
+    my_IP = 'localhost'
   return my_IP
   
 def main():
@@ -43,7 +47,7 @@ def main():
 
     
   
-  print "Waiting for client on port: ", clientSocket.getsockname()
+  print "Listening for connection on: ", clientSocket.getsockname()
   #print "Redirection message: ", serverAddr
   
   clientSocket.listen(10)
@@ -60,15 +64,19 @@ def main():
       else:
         print "Responding with serverlist of %d servers" % len(serverList)
         sendMe = createServerList(serverList)
+        sendMe = "L " + sendMe
         client.send(sendMe);
     elif recv[0] == 'S':
       print "Map server connected: ", addr
       client.send("O");
+      # Close this connection as soon as possible:
+      client.close()
       addrString = addr[0] + " " + str(addr[1])
       serverList.append([addrString, recv[1]])
       print "Serverlist is now %d long" % len(serverList)
     else:
       print "Got unexpected message from client: %s msg: %s" % (addr, recv)
+
     client.close()
 
 if __name__ == "__main__":
