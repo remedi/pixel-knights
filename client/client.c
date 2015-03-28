@@ -196,8 +196,8 @@ int main(int argc, char *argv[]) {
 		map_nr = buffer[2];
 		break;
 	    }
-	    else if(buffer[0] == 'M') {
-		printf("main: Received redirection order\n");
+	    else if(buffer[0] == 'L') {
+		printf("main: Received serverlist, parsing first address\n");
 		strtok(buffer, " ");
 		//Use these pointers again. We are going another loop inside while.
 		argv[1] = strtok(NULL, " ");
@@ -205,6 +205,10 @@ int main(int argc, char *argv[]) {
 		argc = 3;
 		//redir_port = strtok(NULL, " ");
 		//ipv4_parser(redir_ip, redir_port);
+	    }
+	    else if(buffer[0] == 'E') {
+		printf("main: Connected to MM server but serverlist is empty\n");
+		exit_clean = 1;
 	    }
 	    else {
 		printf("Unexpected message from server: %s\n", buffer);
@@ -268,6 +272,8 @@ int main(int argc, char *argv[]) {
         if (thread_complete)
             break;
     }
+
+    printf("\nmain: Commencing cleanup\n");
 
     //Perform cleanup:
     printf("main: Waiting for map update thread to exit\n");
