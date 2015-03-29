@@ -6,7 +6,7 @@ import socket
 def createServerList(serverList):
   ser_string = ""
   for server in serverList:
-    ser_string = ser_string + server[0] + " " + server[1]
+    ser_string = ser_string + server[0] + " " + server[1] + "\200"
   return ser_string
 
 def getOwnAddr():
@@ -58,14 +58,11 @@ def main():
     recv = client.recv(1024)
     if recv[0] == 'H':
       print "Client connected from: ", addr
-      if len(serverList) == 0:
-        print "Client connected but serverlist is empty"
-        client.send('E')
-      else:
-        print "Responding with serverlist of %d servers" % len(serverList)
-        sendMe = createServerList(serverList)
-        sendMe = "L " + sendMe
-        client.send(sendMe);
+      print "Responding with serverlist of %d servers" % len(serverList)
+      sendMe = createServerList(serverList)
+      sendMe = "L%x " % (len(serverList)) + sendMe
+      #sendMe = "L{:02X} ".format(len(serverList)) + sendMe
+      client.send(sendMe);
     elif recv[0] == 'S':
       print "Map server connected: ", addr
       client.send("O");
