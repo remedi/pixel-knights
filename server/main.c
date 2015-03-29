@@ -56,7 +56,7 @@ int main(int argc, char *argv[]) {
     hints.ai_flags = AI_PASSIVE;
 
     //If player has defined map number (otherwise default is 1):
-    if(argc == 2) {
+    if(argc > 1) {
 	map_nr = strtol(argv[1], NULL, 10);
     }
     //Create map
@@ -66,7 +66,6 @@ int main(int argc, char *argv[]) {
     }
     //Announce this server to MM server, if user has given map_nr, ip and port. 
     if(argc == 4) {
-	map_nr = strtol(argv[1], NULL, 10);
 	if(connectMM(argv[2], argv[3], map_nr, &my_IP) != 0) {
 	    printf("Error when announcing this server to MM server\n");
 	}
