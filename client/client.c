@@ -25,14 +25,56 @@
 //Mutex for preventing map updates when player is writing a chat message or reading help
 pthread_mutex_t mtx = PTHREAD_MUTEX_INITIALIZER;
 
+//Parse list from from given buffer, that contains serverlist. 
+//Present that list to user and ask which server they want to connect.
+struct sockaddr_in serverListParser(char *buf) {
+    struct sockaddr_in temp; 
+    memset(&temp, 0, sizeof(struct sockaddr_in));
+    size_t buf_len = strlen(buf) * sizeof(char);
+    char *temp_buf = malloc(buf_len);
+    char *temp_buf_start = temp_buf;
+    char server_count = buf[1];
+    int i = 0;
+    char **server_array = malloc(sizeof(char *) * server_count);
+    int user_input = 0;
+    char *ip, *port;
+    memcpy(temp_buf, buf, buf_len);
+    //Server count is an ascii character:
+    server_count -= 48;
+    temp_buf += 3;
+    server_array[i] = strtok(temp_buf, "\200");
+    for(i = 1; i < server_count; i++) {
+	server_array[i] = strtok(NULL, "\200");
+    }
+
+    printf("\nServer list from MM server:\n");
+
+    for(i = 0; i < server_count; i++) {
+	printf("%d: %s\n", i, server_array[i]);
+    }
+    printf("Please choose a number:\n>>");
+    user_input = getchar();
+    user_input -= 48;
+    if(user_input > 0 || user_input < server_count) {
+	ip = strtok(server_array[user_input], " ");
+	port = strtok(NULL, " ");
+    }
+    temp = ipv4_parser(ip, port);
+
+    free(temp_buf_start);
+    free(server_array);
+    return temp;
+}
+
 //Parse ip and port from character strings to a struct sockaddr_in.
 struct sockaddr_in ipv4_parser(char *ip, char *port) {
-    struct sockaddr_in temp;
+    struct sockaddr_in temp; 
     memset(&temp, 0, sizeof(struct sockaddr_in));
     if(inet_pton(AF_INET, ip, &temp.sin_addr) < 1) {
         perror("ipv4_parser, inet_pton");
     }
     temp.sin_port = ntohs(strtol(port, NULL, 10));
+    temp.sin_family = AF_INET;
     return temp;
 }
 
@@ -107,6 +149,7 @@ int main(int argc, char *argv[]) {
     int exit_clean = 0;
     volatile sig_atomic_t thread_complete = 0;
 
+
     if(argc == 3 || argc == 2) {
         printf("Joining a multiplayer game..\n");
         printf("Enter name: ");
@@ -114,11 +157,18 @@ int main(int argc, char *argv[]) {
             perror("fgets");
         }
 	if(strlen(my_name) == 1) {
+	    //Default name if user only pressed enter
 	    strcpy(my_name, "Default");
 	}
 	else {
 	    //Remove last newline:
 	    my_name[strlen(my_name)-1] = '\0';
+	}
+	if(argc == 3) {
+	    sock_addr_in = ipv4_parser(argv[1], argv[2]);
+	}
+	else {
+	    sock_addr_in = ipv4_parser("localhost", argv[1]);
 	}
     }
     else {
@@ -155,19 +205,10 @@ int main(int argc, char *argv[]) {
 
     while(!exit_clean) {
 	//Setup socket
-	printf("main: Initializing netgame\n");
 	sock = socket(AF_INET, SOCK_STREAM, 0);
 	if(sock < 0) {
 	    perror("socket");
 	}
-	memset(&sock_addr_in, 0, sizeof(struct sockaddr_in));
-	if(argc == 3) {
-	    sock_addr_in = ipv4_parser(argv[1], argv[2]);
-	}
-	else {
-	    sock_addr_in = ipv4_parser("localhost", argv[1]);
-	}
-	sock_addr_in.sin_family = AF_INET;
 	//Connect to the socket
 	printf("main: Connecting to server..\n");
 	if(connect(sock, (struct sockaddr *) &sock_addr_in, sizeof(sock_addr_in)) == -1) {
@@ -185,6 +226,7 @@ int main(int argc, char *argv[]) {
 		exit_clean = 1;
 	    }
 	    memset(buffer, '\0', BUFLEN);
+	    //Read message from socket. It starts with I if its map server, and L if its MM server
 	    if(read(sock, buffer, BUFLEN) < 1) {
 		perror("main, read");
 		exit_clean = 1;
@@ -197,18 +239,21 @@ int main(int argc, char *argv[]) {
 		break;
 	    }
 	    else if(buffer[0] == 'L') {
-		printf("main: Received serverlist, parsing first address\n");
-		strtok(buffer, " ");
+		if(buffer[1] == '0') {
+		    printf("main: Connected to MM server but serverlist is empty\n");
+		    exit_clean = 1;
+		    break;
+		}
+		//printf("main: Received serverlist, parsing first address\n");
+		/*strtok(buffer, " ");
 		//Use these pointers again. We are going another loop inside while.
 		argv[1] = strtok(NULL, " ");
 		argv[2] = strtok(NULL, " ");
 		argc = 3;
+		sock_addr_in = ipv4_parser(argv[1], argv[2]);*/
+		sock_addr_in = serverListParser(buffer);
 		//redir_port = strtok(NULL, " ");
 		//ipv4_parser(redir_ip, redir_port);
-	    }
-	    else if(buffer[0] == 'E') {
-		printf("main: Connected to MM server but serverlist is empty\n");
-		exit_clean = 1;
 	    }
 	    else {
 		printf("Unexpected message from server: %s\n", buffer);

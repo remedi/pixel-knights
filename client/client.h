@@ -5,6 +5,10 @@
 
 // Functions:
 
+//Parse list from from given buffer, that contains serverlist. 
+//Present that list to user and ask which server they want to connect.
+struct sockaddr_in serverListParser(char *);
+
 //Parse ip and port from character strings to a struct sockaddr_in.
 struct sockaddr_in ipv4_parser(char *, char *);
 
