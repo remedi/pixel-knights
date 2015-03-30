@@ -14,8 +14,6 @@
 #include "client.h"
 #include "update.h"
 
-#define MAP_HEIGHT 10
-#define MAP_WIDTH 10
 #define BUFLEN 1000
 #define MSGLEN 40
 
@@ -115,7 +113,7 @@ void *updateMap(void *ctx) {
     rows = map_data.map;
 
     //Reserve memory for chat service
-    message_count = MAP_HEIGHT;
+    message_count = map_data.height;
     message_array = malloc(sizeof(char *) * message_count);
     for(i = 0; i<message_count; i++) {
         message_array[i] = malloc(sizeof(char) * MSGLEN);
