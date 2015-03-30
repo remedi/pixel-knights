@@ -69,7 +69,8 @@ def main():
       # Close this connection as soon as possible:
       client.close()
       addrString = addr[0] + " " + str(addr[1])
-      serverList.append([addrString, recv[1]])
+      serverList.append([addrString, chr(ord(recv[1])+48)])
+      print "Added: ", serverList[-1]
       print "Serverlist is now %d long" % len(serverList)
     else:
       print "Got unexpected message from client: %s msg: %s" % (addr, recv)
