@@ -22,6 +22,9 @@ int createMap(Mapdata *map_data, int map_nr) {
     case 2:
 	map_path = "../maps/split.map";
 	break;
+    case 3:
+	map_path = "../maps/hall.map";
+	break;
     default:
 	map_path = "../maps/square.map";
 	map_nr = 1;
