@@ -12,30 +12,45 @@
 //Allocate memory for map. Initialize memory as map tiles. Return two-dimensional character array as the map.
 int createMap(Mapdata *map_data, int map_nr) {
     int width = 0, height = 0;
-    int fd, i;
+    int fd = 0, i;
     char *map_path;
 
+    fd = open("../maps/square.map", O_RDONLY);
+    if (fd != -1)
+        close(fd);
+
     switch(map_nr) {
-    case 1:
-	map_path = "../maps/square.map";
-	break;
-    case 2:
-	map_path = "../maps/split.map";
-	break;
-    case 3:
-	map_path = "../maps/hall.map";
-	break;
-    default:
-	map_path = "../maps/square.map";
-	map_nr = 1;
-	break;
+        case 1:
+            if (fd == -1)
+                map_path = "maps/square.map";
+            else 
+                map_path = "../maps/square.map";
+            break;
+        case 2:
+            if (fd == -1)
+                map_path = "maps/split.map";
+            else
+                map_path = "../maps/split.map";
+            break;
+        case 3:
+            if (fd == -1)
+                map_path = "maps/hall.map";
+            else
+                map_path = "../maps/hall.map";
+            break;
+        default:
+            if (fd == -1)
+                map_path = "maps/square.map";
+            else
+                map_path = "../maps/square.map";
+            map_nr = 1;
+            break;
     }
 
     fd = open(map_path, O_RDONLY);
-    //fd = open("test", (O_WRONLY | O_CREAT), 00666);
     if(fd == -1) {
-	perror("open");
-	return -1;
+        perror("open");
+        return -1;
     }
     read(fd, &width, 1);
     read(fd, &height, 1);
@@ -46,27 +61,27 @@ int createMap(Mapdata *map_data, int map_nr) {
     // Allocate memory for map
     char **rows = malloc(sizeof(char *) * height);
     if(rows == NULL) {
-	perror("drawMap, malloc");
-	return -1;
+        perror("drawMap, malloc");
+        return -1;
     }
 
     //Allocate memory for each row and set initial tiles
     for(i = 0; i<height; i++) {
-	rows[i] = malloc(sizeof(char) * width + 1);
-	if(rows[i] == NULL) {
-	    perror("drawMap, malloc");
-	    free(rows);
-	    return -1;
-	}
-	// Initialize rows
-	memset(rows[i], ' ', width-1);
-	rows[i][width] = '\0';
+        rows[i] = malloc(sizeof(char) * width + 1);
+        if(rows[i] == NULL) {
+            perror("drawMap, malloc");
+            free(rows);
+            return -1;
+        }
+        // Initialize rows
+        memset(rows[i], ' ', width-1);
+        rows[i][width] = '\0';
     }
 
     for(i = 0; i<height; i++) {
-	read(fd, rows[i], width);
-	//Skip the newline
-	lseek(fd, 1, SEEK_CUR);
+        read(fd, rows[i], width);
+        //Skip the newline
+        lseek(fd, 1, SEEK_CUR);
     }
 
 
