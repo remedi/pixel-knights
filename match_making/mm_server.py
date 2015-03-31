@@ -3,6 +3,24 @@
 import socket
 
 #Create which contains all the servers and maps they are running. This string is then send to clients.
+
+def pollServerList(serverList):
+  addr = ""
+  port = int()
+  response = ""
+  newlist = []
+  for server in serverList:
+    addr = server[0].split(' ')[0]
+    port = int(server[0].split(' ')[1])
+    try:
+      sock = socket.create_connection((addr, port), 1)
+    except:
+      continue
+    sock.send("P")
+    response = sock.recv(1024)
+    newlist.append(server)
+  return newlist
+
 def createServerList(serverList):
   ser_string = ""
   for server in serverList:
@@ -46,6 +64,7 @@ def main():
   while 1:
   
     (client, addr) = clientSocket.accept()
+    serverList = pollServerList(serverList)
     recv = client.recv(1024)
     if recv[0] == 'H':
       print "Client connected from: ", addr
