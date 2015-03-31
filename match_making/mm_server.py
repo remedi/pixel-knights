@@ -18,6 +18,10 @@ def pollServerList(serverList):
       continue
     sock.send("P")
     response = sock.recv(1024)
+    if len(response) == 1:
+      server[2] = 0
+    else:
+      server[2] = int(48 + int(response[1]))
     newlist.append(server)
     sock.close()
   return newlist
@@ -25,7 +29,7 @@ def pollServerList(serverList):
 def createServerList(serverList):
   ser_string = ""
   for server in serverList:
-    ser_string = ser_string + server[0] + " " + server[1] + "\200"
+    ser_string = ser_string + server[0] + " Map number: " + server[1] + " Player count: " + chr(server[2]) + "\200"
   return ser_string
 
 def getOwnAddr():
@@ -80,7 +84,7 @@ def main():
       # Close this connection as soon as possible:
       client.close()
       addrString = addr[0] + " " + str(addr[1])
-      serverList.append([addrString, chr(ord(recv[1])+48)])
+      serverList.append([addrString, chr(ord(recv[1])+48), 0])
       print "Added: ", serverList[-1]
       print "Serverlist is now %d long" % len(serverList)
     else:

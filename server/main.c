@@ -93,7 +93,7 @@ int main(int argc, char *argv[]) {
         }
         if (bind(listenfd, (struct sockaddr *) &my_IP, sizeof(my_IP)) == -1) {
             perror("bind");
-
+            exit(EXIT_FAILURE);
         }
 
         inet_ntop(AF_INET, (void *) &my_IP.sin_addr, ipstr, INET_ADDRSTRLEN);
@@ -367,7 +367,7 @@ int main(int argc, char *argv[]) {
                     else if (!strncmp(recvbuf, "P", 1)) {
                         sendbuf[0] = 'R';
                         pthread_mutex_lock(&lock);
-                        sendbuf[1] = getSize(&game);
+                        sendbuf[1] = getSize(&game) + 48;
                         pthread_mutex_unlock(&lock);
                         if (send(i, sendbuf, 2, 0) < 0)
                             perror("send");
