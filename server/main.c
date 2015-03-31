@@ -73,7 +73,7 @@ int main(int argc, char *argv[]) {
     }
     // Announce this server to MM server, if user has given map_nr, ip and port. 
     if (argc == 4) {
-        status = connectMM(argv[2], argv[3], map_nr);
+        status = connectMM(argv[2], argv[3], map_nr, &my_IP);
         if (status == -1) {
             fprintf(stderr, "Could not connect to MM server\n");
             exit(EXIT_FAILURE);
@@ -93,8 +93,9 @@ int main(int argc, char *argv[]) {
         }
         if (bind(listenfd, (struct sockaddr *) &my_IP, sizeof(my_IP)) == -1) {
             perror("bind");
-            exit(EXIT_FAILURE);
+
         }
+
         inet_ntop(AF_INET, (void *) &my_IP.sin_addr, ipstr, INET_ADDRSTRLEN);
         printf("Server Port: %d\n", ntohs(my_IP.sin_port));
     }
@@ -183,7 +184,7 @@ int main(int argc, char *argv[]) {
             }
             // Print the address from where the connection came
             inet_ntop(AF_INET, &((struct sockaddr_in*)&their_addr)->sin_addr,\
-                      recvbuf, INET_ADDRSTRLEN);
+                    recvbuf, INET_ADDRSTRLEN);
             printf("New connection accepted from %s!\n", recvbuf);
 
             // Clear their_addr and socklen
@@ -201,8 +202,9 @@ int main(int argc, char *argv[]) {
             // Iterate every descriptor below fdmax
             for (int i = 0; i <= fdmax; i++) {
 
-                // Clean the receive buffer
+                // Clean the buffers
                 memset(recvbuf, 0, MAXDATASIZE);
+                memset(sendbuf, 0, MAXDATASIZE);
 
                 // If i is ready for reading
                 if (FD_ISSET(i, &rdset)) {
@@ -359,6 +361,16 @@ int main(int argc, char *argv[]) {
                         FD_CLR(i, &master);
                         close(i);
                         break;
+                    }
+
+                    // If the message is P it is a polling message from MM server
+                    else if (!strncmp(recvbuf, "P", 1)) {
+                        sendbuf[0] = 'R';
+                        pthread_mutex_lock(&lock);
+                        sendbuf[1] = getSize(&game);
+                        pthread_mutex_unlock(&lock);
+                        if (send(i, sendbuf, 2, 0) < 0)
+                            perror("send");
                     }
 
                     // Just to be able to remotely close the server...

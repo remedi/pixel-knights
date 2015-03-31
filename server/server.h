@@ -19,6 +19,6 @@ int checkCoordinate(int);
 int sendAnnounce(Gamestate*, char*, size_t, ID);
 
 // Announce map server to matchmaking server
-int connectMM(char *, char *, char);
+int connectMM(char *, char *, char, struct sockaddr_in*);
 
 #endif

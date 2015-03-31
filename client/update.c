@@ -143,7 +143,7 @@ void *updateMap(void *ctx) {
         }
         else if(buf[0] == 'G') {
             if((bytes - 2) % 4 != 0) {
-                printf("G message failed sanity check. Unaccepted message length: %lu\n", bytes);
+                printf("G message failed sanity check. Unaccepted message length: %zu\n", bytes);
                 memset(buf, '\0', BUFLEN);
                 continue;
             }

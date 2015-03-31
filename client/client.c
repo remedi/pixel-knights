@@ -287,7 +287,7 @@ int main(int argc, char *argv[]) {
             sprintf(chat_buffer, "C%s: %s", my_name, buffer);
             printf("main: Wrote ");
             bytes = write(sock, chat_buffer, strlen(chat_buffer));
-            printf("%lu bytes to socket: %d\n", bytes, sock);
+            printf("%zu bytes to socket: %d\n", bytes, sock);
             continue;
         }
         else if(input_char == 'q' || input_char == '0') {

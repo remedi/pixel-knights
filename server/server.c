@@ -15,10 +15,11 @@
 #include "server.h"
 
 // Announce map server to matchmaking server
-int connectMM(char *IP, char *port, char map_nr) {
+int connectMM(char *IP, char *port, char map_nr, struct sockaddr_in* my_IP) {
     int sock;
     struct sockaddr_in sock_addr_in;
     char message[2];
+    socklen_t my_IP_len = sizeof(struct sockaddr_in);
 
     // The message sent to MM server contains 'S' + map number
     message[0] = 'S';
@@ -55,6 +56,10 @@ int connectMM(char *IP, char *port, char map_nr) {
 
     // OK reply from MM
     if (message[0] == 'O') {
+       if (getsockname(sock, (struct sockaddr *) my_IP, &my_IP_len) == -1) {
+            perror("getsockname");
+            return -1;
+        } 
         close(sock);
         return 0;
     }

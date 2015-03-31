@@ -8,12 +8,13 @@
 // ID is 8 bits long unsigned integer
 typedef uint8_t ID;
 
-typedef struct gamestate_s Gamestate;
-
 typedef struct coodinate_s {
     uint8_t x;
     uint8_t y;
 }Coord;
+
+// Forward declaration of Gamestate
+typedef struct gamestate_s Gamestate;
 
 // Gamedata structure is a linked list (server side)
 struct gamestate_s {
@@ -34,6 +35,7 @@ typedef struct playerdata {
     uint8_t sign;
 } Playerdata;
 
+// Gamedata includes player PROBABLY NOT NEEDED 
 typedef struct gamedata {
     uint8_t player_count;
     uint8_t monster_count;
@@ -48,13 +50,13 @@ typedef struct contex_server {
     volatile sig_atomic_t* done;
     int *main_exit;
     char *map_nr;
-}Contex_client_thread;
+} Contex_client_thread;
 
 // Context structs for server thread
 typedef struct contex_client {
     Gamestate* g;
     pthread_mutex_t* lock;
-}Contex_server_thread;
+} Contex_server_thread;
 
 // Action enumeration
 typedef enum {
@@ -66,12 +68,12 @@ typedef enum {
     SHOOT
 } Action;
 
+// Data structure for map loaded from a file
 typedef struct mapdata {
     uint8_t height;
     uint8_t width;
     uint8_t map_nr;
     char **map;
-}Mapdata;
-
+} Mapdata;
 
 #endif
