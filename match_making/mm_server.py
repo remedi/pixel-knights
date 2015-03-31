@@ -19,6 +19,7 @@ def pollServerList(serverList):
     sock.send("P")
     response = sock.recv(1024)
     newlist.append(server)
+    sock.close()
   return newlist
 
 def createServerList(serverList):

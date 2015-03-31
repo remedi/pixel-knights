@@ -371,6 +371,11 @@ int main(int argc, char *argv[]) {
                         pthread_mutex_unlock(&lock);
                         if (send(i, sendbuf, 2, 0) < 0)
                             perror("send");
+                        
+                        // Clear the descriptor from the master set
+                        FD_CLR(i, &master);
+                        close(i);
+                        break;
                     }
 
                     // Just to be able to remotely close the server...
