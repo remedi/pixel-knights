@@ -2,6 +2,7 @@
 #define TYPEDEF_H
 
 #include <stdint.h>
+#include <pthread.h>
 #include <signal.h>
 
 // ID is 8 bits long unsigned integer

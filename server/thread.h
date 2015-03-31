@@ -5,7 +5,7 @@
 
 #include "../typedefs.h"
 
-
+// Send game state to all connected clients periodically
 void* sendGamestate(void*);
 
 #endif

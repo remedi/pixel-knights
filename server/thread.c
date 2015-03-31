@@ -15,6 +15,7 @@
 #define MAXDATASIZE 128
 #define G_INTERVAL_USEC 100000
 
+// Send game state to all connected clients periodically
 void* sendGamestate(void* ctx) {
 
     // Init variables

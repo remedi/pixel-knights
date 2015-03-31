@@ -7,7 +7,6 @@
 #include <netinet/in.h>
 #include <string.h>
 #include <arpa/inet.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -15,70 +14,55 @@
 #include "../maps/maps.h"
 #include "server.h"
 
-
-int connectMM(char *IP, char *port, char map_nr, struct sockaddr_in *this_IP) {
+// Announce map server to matchmaking server
+int connectMM(char *IP, char *port, char map_nr) {
     int sock;
     struct sockaddr_in sock_addr_in;
-    char new_server[2];
-    char *buf = malloc(10);
-    socklen_t this_IP_len;
+    char message[2];
 
-    this_IP_len = sizeof(struct sockaddr_in);
+    // The message sent to MM server contains 'S' + map number
+    message[0] = 'S';
+    message[1] = map_nr;
 
-
-    memset(buf, '\0', 10);
-
-    new_server[0] = 'S';
-    new_server[1] = map_nr;
-
-    //Parse address and port
+    // Parse address and port
     memset(&sock_addr_in, 0, sizeof(struct sockaddr_in));
     if(inet_pton(AF_INET, IP, &sock_addr_in.sin_addr) < 1) {
         perror("ipv4_parser, inet_pton");
+        return -1;
     }
-    //sock_addr_in.sin_port = ntohs(strtol(port, NULL, 10));
     sock_addr_in.sin_port = htons(strtol(port, NULL, 10));
     sock_addr_in.sin_family = AF_INET;
 
-    sock = socket(AF_INET, SOCK_STREAM, 0);
-    if(sock < 0) {
-	perror("socket");
-	return -1;
+    if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+        perror("MM socket, create");
+        return -1;
     }
-    printf("Connecting to MM server..\n");
-    if(connect(sock, (struct sockaddr *) &sock_addr_in, sizeof(sock_addr_in)) == -1) {
-	perror("MM, connect");
-	return -1;
-    }
-    printf("Connection succeeded. Sending server information..\n");
-    //Send server information
-    if(write(sock, new_server, 2) == -1) {
-	perror("write");
-	return -1;
-    }
-    //Wait for ok reply
-    if(read(sock, buf, 1) == -1) {
-	perror("write");
-	return -1;
+    if (connect(sock, (struct sockaddr *) &sock_addr_in, sizeof(sock_addr_in)) == -1) {
+        perror("MM socket, connect");
+        return -1;
     }
 
-    if(buf[0] == 'O') {
-	printf("Got succesful acknowledgement from mm server\n");
+    // Send server information
+    if (write(sock, message, 2) == -1) {
+        perror("MM socket, write");
+        return -1;
     }
+    // Wait for ok reply
+    if (read(sock, message, 1) == -1) {
+        perror("MM socket, read");
+        return -1;
+    }
+
+    // OK reply from MM
+    if (message[0] == 'O') {
+        close(sock);
+        return 0;
+    }
+    // Something went wrong
     else {
-	printf("Error when communicatin with mm server\n");
-	return -1;
+        close(sock);
+        return -2;
     }
-    //Get own address
-    if(getsockname(sock, (struct sockaddr *) this_IP, &this_IP_len) == -1) {
-	perror("getsockname");
-	return -1;
-    }
-    if(close(sock) == -1) {
-	perror("MM socket, close");
-    }
-
-    return 0;
 }
 
 // Returns the maximum of a and b

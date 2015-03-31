@@ -18,7 +18,7 @@ int checkCoordinate(int);
 // Sends announcement to all players except ID
 int sendAnnounce(Gamestate*, char*, size_t, ID);
 
-//Announce map server to match making server
-int connectMM(char *, char *, char, struct sockaddr_in*);
+// Announce map server to matchmaking server
+int connectMM(char *, char *, char);
 
 #endif

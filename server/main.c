@@ -32,14 +32,13 @@ int main(int argc, char *argv[]) {
     struct sockaddr_in my_IP;
     socklen_t socklen = sizeof(struct sockaddr);
     int status, listenfd, new_fd, fdmax, yes = 1;
-    char map_nr = 1;
+    char map_nr;
     fd_set rdset, master;
     char* recvbuf = malloc(MAXDATASIZE * sizeof(char));
     char* sendbuf = malloc(MAXDATASIZE * sizeof(char));
     char ipstr[INET_ADDRSTRLEN];
     ssize_t nbytes; 
     pthread_t gamestate_thread;
-    Mapdata mapdata;
 
     // Initialize game state
     Gamestate game;
@@ -48,6 +47,7 @@ int main(int argc, char *argv[]) {
     Coord c;
     Action a;
     uint8_t* data;
+    Mapdata mapdata;
 
     // Initialize hints struct for getaddrinfo
     memset(&hints, 0, sizeof(struct addrinfo));
@@ -55,78 +55,83 @@ int main(int argc, char *argv[]) {
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_flags = AI_PASSIVE;
 
-    //If player has defined map number (otherwise default is 1):
-    if(argc > 1) {
-	map_nr = strtol(argv[1], NULL, 10);
+    // Map default
+    if (argc == 1)
+        map_nr = 1;
+    // If player has defined map number
+    else if (argc == 2 || argc == 4) {
+        map_nr = strtol(argv[1], NULL, 10);
     }
-    //Create map
-    if(createMap(&mapdata, map_nr) != 0) {
-	printf("Error creating map.\n");
-	exit(EXIT_FAILURE);
+    else {
+        printf("Usage: %s [<map_nr>] [[<mm_ip>]] [[<mm_port>]]\n", argv[0]);
+        exit(EXIT_SUCCESS);
     }
-    //Announce this server to MM server, if user has given map_nr, ip and port. 
-    if(argc == 4) {
-	if(connectMM(argv[2], argv[3], map_nr, &my_IP) != 0) {
-	    printf("Error when announcing this server to MM server\n");
-	}
-	//my_IP.sin_port = htonl(my_IP.sin_port);
-	//my_IP.sin_family = AF_INET;
-	//Create public IP socket
-	if ((listenfd = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
-	    perror("socket");
-	    exit(EXIT_FAILURE);
-	}
-	if (setsockopt(listenfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1) {
-	    perror("setsockopt");
-	    exit(EXIT_FAILURE);
-	}
-	//Sleep to be sure the previous socket was closed. We are using that port again now:
-	sleep(1);
-	if (bind(listenfd, (struct sockaddr *) &my_IP, sizeof(my_IP)) == -1) {
-	    perror("bind");
-	    printf("Errno: %d\n", errno);
-	    exit(EXIT_FAILURE);
-	}
-	inet_ntop(AF_INET, (void *) &my_IP.sin_addr, ipstr, INET_ADDRSTRLEN);
-	//printf("Server Port: %d\n", ntohs(my_IP.sin_port));
-	printf("My port host order: %d network order: %d\n", my_IP.sin_port, ntohs(my_IP.sin_port));
-
+    // Create map
+    if (createMap(&mapdata, map_nr) != 0) {
+        fprintf(stderr, "Error creating map.\n");
+        exit(EXIT_FAILURE);
+    }
+    // Announce this server to MM server, if user has given map_nr, ip and port. 
+    if (argc == 4) {
+        status = connectMM(argv[2], argv[3], map_nr);
+        if (status == -1) {
+            fprintf(stderr, "Could not connect to MM server\n");
+            exit(EXIT_FAILURE);
+        }
+        if (status == -2) {
+            fprintf(stderr, "Something went wrong while connecting to MM server\n");
+            exit(EXIT_FAILURE);
+        }
+        // Create public IP socket
+        if ((listenfd = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
+            perror("socket");
+            exit(EXIT_FAILURE);
+        }
+        if (setsockopt(listenfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1) {
+            perror("setsockopt");
+            exit(EXIT_FAILURE);
+        }
+        if (bind(listenfd, (struct sockaddr *) &my_IP, sizeof(my_IP)) == -1) {
+            perror("bind");
+            exit(EXIT_FAILURE);
+        }
+        inet_ntop(AF_INET, (void *) &my_IP.sin_addr, ipstr, INET_ADDRSTRLEN);
+        printf("Server Port: %d\n", ntohs(my_IP.sin_port));
     }
     // Create local socket
     else {
-	if ((status = getaddrinfo(NULL, PORT, &hints, &results)) != 0) {
-	    fprintf(stderr, "getaddrinfo error: %s\n", gai_strerror(status));
-	    exit(EXIT_FAILURE);
-	}
+        if ((status = getaddrinfo(NULL, PORT, &hints, &results)) != 0) {
+            fprintf(stderr, "getaddrinfo error: %s\n", gai_strerror(status));
+            exit(EXIT_FAILURE);
+        }
 
-	// Try to create socket and bind
-	for (i = results; i != NULL; i = i->ai_next) {
-	    if ((listenfd = socket(i->ai_family, i->ai_socktype, i->ai_protocol)) == -1) {
-		perror("socket error");
-		continue;
-	    }
-	    if (setsockopt(listenfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1) {
-		perror("setsockopt error");
-		exit(EXIT_FAILURE);
-	    }
-	    if (bind(listenfd, i->ai_addr, i->ai_addrlen) == -1) {
-		perror("bind error");
-		continue;
-	    }
-	    break;
-	}
+        // Try to create socket and bind
+        for (i = results; i != NULL; i = i->ai_next) {
+            if ((listenfd = socket(i->ai_family, i->ai_socktype, i->ai_protocol)) == -1) {
+                perror("socket error");
+                continue;
+            }
+            if (setsockopt(listenfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1) {
+                perror("setsockopt error");
+                exit(EXIT_FAILURE);
+            }
+            if (bind(listenfd, i->ai_addr, i->ai_addrlen) == -1) {
+                perror("bind error");
+                continue;
+            }
+            break;
+        }
 
-	if (i == NULL) {
-	    fprintf(stderr, "Could not find suitable address");
-	    exit(EXIT_FAILURE);
-	}
+        if (i == NULL) {
+            fprintf(stderr, "Could not find suitable address");
+            exit(EXIT_FAILURE);
+        }
 
-	inet_ntop(i->ai_family, &((struct sockaddr_in*)i->ai_addr)->sin_addr, ipstr, INET_ADDRSTRLEN);
-	// We don't need this anymore
-	freeaddrinfo(results);
-	printf("Server Port: %s\n", PORT);
+        inet_ntop(i->ai_family, &((struct sockaddr_in*)i->ai_addr)->sin_addr, ipstr, INET_ADDRSTRLEN);
+        // We don't need this anymore
+        freeaddrinfo(results);
+        printf("Server Port: %s\n", PORT);
     }
-   
 
     // Listen for new connections
     if (listen(listenfd, BACKLOG) == -1) {
@@ -270,7 +275,7 @@ int main(int argc, char *argv[]) {
                         }
                         sendbuf[0] = 'I';
                         memcpy(sendbuf + 1, &id, 1);
-			memcpy(sendbuf + 2, &map_nr, 1);
+                        memcpy(sendbuf + 2, &map_nr, 1);
                         if ((send(i, sendbuf, 3, 0)) == -1) {
                             perror("send error");
                             continue;
