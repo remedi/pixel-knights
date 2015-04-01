@@ -13,9 +13,10 @@
 
 #include "../maps/maps.h"
 #include "server.h"
+#include "gamestate.h"
 
 // Announce map server to matchmaking server
-int connectMM(char *IP, char *port, char map_nr, struct sockaddr_in* my_IP) {
+int registerToMM(char *MM_IP, char *MM_port, char map_nr, struct sockaddr_in* my_IP) {
     int sock;
     struct sockaddr_in sock_addr_in;
     char message[2];
@@ -27,11 +28,11 @@ int connectMM(char *IP, char *port, char map_nr, struct sockaddr_in* my_IP) {
 
     // Parse address and port
     memset(&sock_addr_in, 0, sizeof(struct sockaddr_in));
-    if(inet_pton(AF_INET, IP, &sock_addr_in.sin_addr) < 1) {
+    if(inet_pton(AF_INET, MM_IP, &sock_addr_in.sin_addr) < 1) {
         perror("ipv4_parser, inet_pton");
         return -1;
     }
-    sock_addr_in.sin_port = htons(strtol(port, NULL, 10));
+    sock_addr_in.sin_port = htons(strtol(MM_port, NULL, 10));
     sock_addr_in.sin_family = AF_INET;
 
     if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
@@ -85,16 +86,29 @@ ID createID(void) {
     return id++;
 }
 
-// Check that the coordinate is valid 
-// NOTE: THIS IS PRELIMINARY 
-int checkCoordinate(int c) {
+// Checks for player collisions in target coordinate
+int checkCollision(Gamestate* g, Coord c) {
 
-    // Just perform some checking
-    if (c < 1)
-        return 0;
-    if (c > 8)
-        return 0;
-    return 1;
+    // If Gamestate NULL
+    if (!g)
+        return -1;
+
+    // Linked-list is empty
+    if (g->next == NULL)
+        return -2;
+
+    // First element does not contain player
+    g = g->next;
+
+    while(g) {
+        if (g->c.x == c.x && g->c.y == c.y) {
+            // Collision happened!
+            return -3;
+        }
+        g = g->next;
+    }
+    // No collision
+    return 0;
 }
 
 // Sends announcement to all players
@@ -125,5 +139,4 @@ int sendAnnounce(Gamestate* g, char* msg, size_t len, ID id) {
     }
     return 0;
 }
-
 

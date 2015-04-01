@@ -79,11 +79,12 @@ uint8_t getSize(Gamestate* g) {
 int movePlayer(Gamestate* g, Mapdata *map_data, ID id, Action a) {
 
     Coord temp_coord;
+    Gamestate* game = g;
 
     // If gamestate NULL
     if (!g)
         return -1;
-    
+
     // Iterate the linked-list
     if (!(g = findPlayer(g, id)))
         return -2;
@@ -93,37 +94,45 @@ int movePlayer(Gamestate* g, Mapdata *map_data, ID id, Action a) {
     // Update coordinates
     switch(a) {
         case UP:
-	    temp_coord.y--;
-	    if(checkWall(map_data, temp_coord) == 0) {
-                g->c.y--;
-                break;
+            temp_coord.y--;
+            if (!checkWall(map_data, temp_coord)) {
+                if (!checkCollision(game, temp_coord)) {
+                    g->c.y--;
+                    break;
+                }
             }
-            else
-                return -3;
+            return -3;
+
         case DOWN:
-	    temp_coord.y++;
-	    if(checkWall(map_data, temp_coord) == 0) {
-                g->c.y++;
-                break;
+            temp_coord.y++;
+            if (!checkWall(map_data, temp_coord)) {
+                if (!checkCollision(game, temp_coord)) {
+                    g->c.y++;
+                    break;
+                }
             }
-            else
-                return -3;
+            return -3;
+
         case LEFT:
-	    temp_coord.x--;
-	    if(checkWall(map_data, temp_coord) == 0) {
-                g->c.x--;
-                break;
+            temp_coord.x--;
+            if (!checkWall(map_data, temp_coord)) {
+                if (!checkCollision(game, temp_coord)) {
+                    g->c.x--;
+                    break;
+                }
             }
-            else
-                return -3;
+            return -3;
+
         case RIGHT:
-	    temp_coord.x++;
-	    if(checkWall(map_data, temp_coord) == 0) {
-                g->c.x++;
-                break;
+            temp_coord.x++;
+            if (!checkWall(map_data, temp_coord)) {
+                if (!checkCollision(game, temp_coord)) {
+                    g->c.x++;
+                    break;
+                }
             }
-            else
-                return -3;
+            return -3;
+
         default:
             return -4;
     }
@@ -242,7 +251,7 @@ void freePlayers(Gamestate* g) {
 
     // First element does not contain player
     g = g->next;
-    
+
     // Free all memory
     Gamestate* tmp; 
     while (g) {

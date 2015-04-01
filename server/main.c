@@ -73,7 +73,7 @@ int main(int argc, char *argv[]) {
     }
     // Announce this server to MM server, if user has given map_nr, ip and port. 
     if (argc == 4) {
-        status = connectMM(argv[2], argv[3], map_nr, &my_IP);
+        status = registerToMM(argv[2], argv[3], map_nr, &my_IP);
         if (status == -1) {
             fprintf(stderr, "Could not connect to MM server\n");
             exit(EXIT_FAILURE);
@@ -261,8 +261,24 @@ int main(int argc, char *argv[]) {
                         id = createID();
                         c.x = 1;
                         c.y = 1;
+                        while (1) {
+                            // Check for player collisions in target coordinate
+                            pthread_mutex_lock(&lock);
+                            status = checkCollision(&game, c);
+                            pthread_mutex_unlock(&lock);
+                            // No collision or collision solved
+                            if (!status)
+                                break;
+                            if (status == -1)
+                                fprintf(stderr, "checkCollision %02x: Invalid game state\n", id);
+                            // Game is empty, create a player
+                            if (status == -2)
+                                break;
+                            else
+                                c.x++; c.y++;
+                        }
 
-                        // Add player and lock game state
+                        // Lock game state and add player
                         pthread_mutex_lock(&lock);
                         status = addPlayer(&game, id, c, i, recvbuf[1]);
                         pthread_mutex_unlock(&lock);

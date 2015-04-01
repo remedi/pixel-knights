@@ -13,12 +13,12 @@ int max(int, int);
 ID createID(void);
 
 // Check that the coordinate is valid 
-int checkCoordinate(int);
+int checkCollision(Gamestate*, Coord);
 
 // Sends announcement to all players except ID
 int sendAnnounce(Gamestate*, char*, size_t, ID);
 
-// Announce map server to matchmaking server
-int connectMM(char *, char *, char, struct sockaddr_in*);
+// Register map server to matchmaking server
+int registerToMM(char *, char *, char, struct sockaddr_in*);
 
 #endif
