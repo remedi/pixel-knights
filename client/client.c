@@ -25,45 +25,41 @@
 //Mutex for preventing map updates when player is writing a chat message or reading help
 pthread_mutex_t mtx = PTHREAD_MUTEX_INITIALIZER;
 
-//Parse list from from given buffer, that contains serverlist. 
+//Parse list from from given buffer, that contains serverlist.
 //Present that list to user and ask which server they want to connect.
 struct sockaddr_in serverListParser(char *buf) {
-    struct sockaddr_in temp; 
-    memset(&temp, 0, sizeof(struct sockaddr_in));
-    size_t buf_len = strlen(buf) * sizeof(char);
-    char *temp_buf = malloc(buf_len);
-    char *temp_buf_start = temp_buf;
-    char server_count = buf[1];
-    int i = 0;
-    char **server_array = malloc(sizeof(char *) * server_count);
-    int user_input = 0;
+
+    // Server count is an ASCII number
+    int server_count = buf[1] - '0';
+    struct sockaddr_in serverAddr; 
+    memset(&serverAddr, 0, sizeof(struct sockaddr_in));
+    int i = 0, user_input = -1;
+    char **server_array = malloc(sizeof(char*) * server_count);
     char *ip, *port;
-    memcpy(temp_buf, buf, buf_len);
-    //Server count is an ascii character:
-    server_count -= 48;
-    temp_buf += 3;
-    server_array[i] = strtok(temp_buf, "\200");
-    for(i = 1; i < server_count; i++) {
-	server_array[i] = strtok(NULL, "\200");
-    }
 
+    // Parse the server list
+    server_array[i] = strtok(buf+3, "\200");
+    for (i = 1; i < server_count; i++) {
+        server_array[i] = strtok(NULL, "\200");
+    }
     printf("\nServer list from MM server:\n");
-
-    for(i = 0; i < server_count; i++) {
-	printf("%d: %s\n", i, server_array[i]);
+    for (i = 0; i < server_count; i++) {
+        printf("%d: %s\n", i, server_array[i]);
     }
-    printf("Please choose a number:\n>>");
-    user_input = getchar();
-    user_input -= 48;
-    if(user_input > 0 || user_input < server_count) {
-	ip = strtok(server_array[user_input], " ");
-	port = strtok(NULL, " ");
-    }
-    temp = ipv4_parser(ip, port);
 
-    free(temp_buf_start);
+    // Force the user to choose a valid character
+    while (user_input < 0 || user_input >= server_count) {
+        printf("\nChoose a valid server (0 - %d):\n>>", server_count-1);
+        user_input = getchar() - '0';
+    }
+
+    // Fill sockaddr_in from ipv4_parser
+    ip = strtok(server_array[user_input], " ");
+    port = strtok(NULL, " ");
+    serverAddr = ipv4_parser(ip, port);
+
     free(server_array);
-    return temp;
+    return serverAddr;
 }
 
 //Parse ip and port from character strings to a struct sockaddr_in.
@@ -87,21 +83,21 @@ char getInput(char *buffer) {
     if(character == 'c') {
         pthread_mutex_lock(&mtx);
         printf("\nEnter max 40 bytes message: ");
-	//Enable echo:
-	if(tcgetattr(STDIN_FILENO, &term_settings) == -1) {
-	    perror("tcgetattr");
-	}
-	memset(&old_settings, 0, sizeof(struct termios));
-	old_settings = term_settings;
-	term_settings.c_lflag = (term_settings.c_lflag | ECHO);
-	term_settings.c_lflag = (term_settings.c_lflag | ICANON);
-	if(tcsetattr(STDIN_FILENO, TCSANOW, &term_settings) == -1) {
-	    perror("main, tcsetattr");
-	}
+        //Enable echo:
+        if(tcgetattr(STDIN_FILENO, &term_settings) == -1) {
+            perror("tcgetattr");
+        }
+        memset(&old_settings, 0, sizeof(struct termios));
+        old_settings = term_settings;
+        term_settings.c_lflag = (term_settings.c_lflag | ECHO);
+        term_settings.c_lflag = (term_settings.c_lflag | ICANON);
+        if(tcsetattr(STDIN_FILENO, TCSANOW, &term_settings) == -1) {
+            perror("main, tcsetattr");
+        }
         fgets(buf, 40, stdin);
-	if(tcsetattr(STDIN_FILENO, TCSANOW, &old_settings) == -1) {
-	    perror("main, tcsetattr");
-	}
+        if(tcsetattr(STDIN_FILENO, TCSANOW, &old_settings) == -1) {
+            perror("main, tcsetattr");
+        }
         //Remove last newline:
         sprintf(buffer, "%s", buf);
         pthread_mutex_unlock(&mtx);
@@ -114,20 +110,20 @@ char *processCommand(char id, char input, char *buf) {
     Action a; 
     memset(buf, '\0', BUFLEN);
     switch(input) {
-    case 'w':
-	a = UP;
-	break;
-    case 's':
-	a = DOWN;
-	break;
-    case 'a':
-	a = LEFT;
-	break;
-    case 'd':
-	a = RIGHT;
-	break;
-    default:
-	return NULL;
+        case 'w':
+            a = UP;
+            break;
+        case 's':
+            a = DOWN;
+            break;
+        case 'a':
+            a = LEFT;
+            break;
+        case 'd':
+            a = RIGHT;
+            break;
+        default:
+            return NULL;
     }
     sprintf(buf, "A%c", id);
     memcpy(buf+2, &a, 1);
@@ -156,20 +152,20 @@ int main(int argc, char *argv[]) {
         if(fgets(my_name, 10, stdin) == NULL) {
             perror("fgets");
         }
-	if(strlen(my_name) == 1) {
-	    //Default name if user only pressed enter
-	    strcpy(my_name, "Default");
-	}
-	else {
-	    //Remove last newline:
-	    my_name[strlen(my_name)-1] = '\0';
-	}
-	if(argc == 3) {
-	    sock_addr_in = ipv4_parser(argv[1], argv[2]);
-	}
-	else {
-	    sock_addr_in = ipv4_parser("localhost", argv[1]);
-	}
+        if(strlen(my_name) == 1) {
+            //Default name if user only pressed enter
+            strcpy(my_name, "Default");
+        }
+        else {
+            //Remove last newline:
+            my_name[strlen(my_name)-1] = '\0';
+        }
+        if(argc == 3) {
+            sock_addr_in = ipv4_parser(argv[1], argv[2]);
+        }
+        else {
+            sock_addr_in = ipv4_parser("localhost", argv[1]);
+        }
     }
     else {
         printf("Usage: client <ipv4> <port>\n");
@@ -204,63 +200,63 @@ int main(int argc, char *argv[]) {
     }
 
     while(!exit_clean) {
-	//Setup socket
-	sock = socket(AF_INET, SOCK_STREAM, 0);
-	if(sock < 0) {
-	    perror("socket");
-	}
-	//Connect to the socket
-	printf("main: Connecting to server..\n");
-	if(connect(sock, (struct sockaddr *) &sock_addr_in, sizeof(sock_addr_in)) == -1) {
-	    perror("main, connect");
-	    printf("Exiting since connection failed\n");
-	    exit_clean = 1;
-	}
-	if(!exit_clean) {
-	    //Send hello message to server
-	    memset(buffer, '\0', BUFLEN);
-	    sprintf(buffer, "H%s", my_name);
-	    printf("main: Sending 'hello' message to the server: %s\n", buffer);
-	    if(write(sock, buffer, strlen(buffer) + 1) < 1) {
-		perror("main, write");
-		exit_clean = 1;
-	    }
-	    memset(buffer, '\0', BUFLEN);
-	    //Read message from socket. It starts with I if its map server, and L if its MM server
-	    if(read(sock, buffer, BUFLEN) < 1) {
-		perror("main, read");
-		exit_clean = 1;
-	    }
-	    if(buffer[0] == 'I') {
-		//Receive ID message
-		printf("main: ID message: ID: %d Map nr: %d\n", buffer[1], buffer[2]);
-		my_id = buffer[1];
-		map_nr = buffer[2];
-		break;
-	    }
-	    else if(buffer[0] == 'L') {
-		if(buffer[1] == '0') {
-		    printf("main: Connected to MM server but serverlist is empty\n");
-		    exit_clean = 1;
-		    break;
-		}
-		//printf("main: Received serverlist, parsing first address\n");
-		/*strtok(buffer, " ");
-		//Use these pointers again. We are going another loop inside while.
-		argv[1] = strtok(NULL, " ");
-		argv[2] = strtok(NULL, " ");
-		argc = 3;
-		sock_addr_in = ipv4_parser(argv[1], argv[2]);*/
-		sock_addr_in = serverListParser(buffer);
-		//redir_port = strtok(NULL, " ");
-		//ipv4_parser(redir_ip, redir_port);
-	    }
-	    else {
-		printf("Unexpected message from server: %s\n", buffer);
-		//exit(EXIT_FAILURE);
-		exit_clean = 1;
-	    }
-	}
+        //Setup socket
+        sock = socket(AF_INET, SOCK_STREAM, 0);
+        if(sock < 0) {
+            perror("socket");
+        }
+        //Connect to the socket
+        printf("main: Connecting to server..\n");
+        if(connect(sock, (struct sockaddr *) &sock_addr_in, sizeof(sock_addr_in)) == -1) {
+            perror("main, connect");
+            printf("Exiting since connection failed\n");
+            exit_clean = 1;
+        }
+        if(!exit_clean) {
+            //Send hello message to server
+            memset(buffer, '\0', BUFLEN);
+            sprintf(buffer, "H%s", my_name);
+            printf("main: Sending 'hello' message to the server: %s\n", buffer);
+            if(write(sock, buffer, strlen(buffer) + 1) < 1) {
+                perror("main, write");
+                exit_clean = 1;
+            }
+            memset(buffer, '\0', BUFLEN);
+            //Read message from socket. It starts with I if its map server, and L if its MM server
+            if(read(sock, buffer, BUFLEN) < 1) {
+                perror("main, read");
+                exit_clean = 1;
+            }
+            if(buffer[0] == 'I') {
+                //Receive ID message
+                printf("main: ID message: ID: %d Map nr: %d\n", buffer[1], buffer[2]);
+                my_id = buffer[1];
+                map_nr = buffer[2];
+                break;
+            }
+            else if(buffer[0] == 'L') {
+                if(buffer[1] == '0') {
+                    printf("main: Connected to MM server but serverlist is empty\n");
+                    exit_clean = 1;
+                    break;
+                }
+                //printf("main: Received serverlist, parsing first address\n");
+                /*strtok(buffer, " ");
+                //Use these pointers again. We are going another loop inside while.
+                argv[1] = strtok(NULL, " ");
+                argv[2] = strtok(NULL, " ");
+                argc = 3;
+                sock_addr_in = ipv4_parser(argv[1], argv[2]);*/
+                sock_addr_in = serverListParser(buffer);
+                //redir_port = strtok(NULL, " ");
+                //ipv4_parser(redir_ip, redir_port);
+            }
+            else {
+                printf("Unexpected message from server: %s\n", buffer);
+                //exit(EXIT_FAILURE);
+                exit_clean = 1;
+            }
+        }
     }
 
     // Fill the thread context struct and start the thread for updating map
@@ -294,7 +290,7 @@ int main(int argc, char *argv[]) {
             buffer[0] = 'Q';
             memcpy(buffer+1, &my_id, 1);
             write(sock, buffer, 2);
-	    exit_clean = 1;
+            exit_clean = 1;
             break;
         }
         else if(input_char == 'h') {
