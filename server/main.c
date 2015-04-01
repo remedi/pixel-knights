@@ -383,7 +383,7 @@ int main(int argc, char *argv[]) {
                     else if (!strncmp(recvbuf, "P", 1)) {
                         sendbuf[0] = 'R';
                         pthread_mutex_lock(&lock);
-                        sendbuf[1] = getSize(&game) + 48;
+                        sendbuf[1] = getSize(&game) + '0';
                         pthread_mutex_unlock(&lock);
                         if (send(i, sendbuf, 2, 0) < 0)
                             perror("send");
