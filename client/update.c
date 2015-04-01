@@ -28,18 +28,18 @@ void free_memory(void *ptr) {
 
 // Add the new message contained in buf to the msg_array.
 // Also rotate pointers to make the newest message show as first.
-char **new_message(char *buf, char **msg_array, int msg_count) {
-    int i;
-    char *temp_ptr = msg_array[msg_count-1];
-    //Rearrange pointers
-    for(i = (msg_count-1); i>0; i--) {
-        msg_array[i] = msg_array[i-1];
+void new_message(char *buf, char **msg_array, int msg_count) {
+    
+    // Move all messages up by 1
+    char *first_msg = msg_array[0];
+    for (int i = 0; i < msg_count-1; i++) {
+        msg_array[i] = msg_array[i+1];
     }
-    msg_array[0] = temp_ptr;
-    memset(msg_array[0], '\0', MSGLEN);
-    //Add newest message as first
-    memcpy(msg_array[0], buf, MSGLEN);
-    return msg_array;
+    msg_array[msg_count-1] = first_msg;
+    
+    // Add newest message as first
+    memset(msg_array[msg_count-1], '\0', MSGLEN);
+    memcpy(msg_array[msg_count-1], buf, MSGLEN);
 }
 
 // This function is a starting point for a thread.
@@ -67,8 +67,8 @@ void *updateMap(void *ctx) {
 
     //Reserve memory for chat service
     message_count = map_data.height;
-    message_array = malloc(sizeof(char *) * message_count);
-    for (i = 0; i<message_count; i++) {
+    message_array = malloc(sizeof(char*) * message_count);
+    for (i = 0; i < message_count; i++) {
         message_array[i] = malloc(sizeof(char) * MSGLEN);
         memset(message_array[i], '\0', MSGLEN);
     }
@@ -87,10 +87,12 @@ void *updateMap(void *ctx) {
         else if (bytes == 0) {
             printf("thread: Server likely disconnected\n");
             break_flag = 0;
+            continue;
         }
         else if (buf[0] == 'C') {
-            printf("thread: Got C message\n");
+            printf("thread: Got C message: %s\n", buf+1);
             new_message(buf+1, message_array, message_count);
+            continue;
         }
         else if (buf[0] == 'G') {
             if ((bytes - 2) % 4 != 0) {
@@ -108,39 +110,39 @@ void *updateMap(void *ctx) {
         }
 
         // Only draw map if user isn't busy doing something else
-        pthread_mutex_lock(c->lock);
-        system("clear");
+        if (!pthread_mutex_trylock(c->lock)) {
+            system("clear");
 
-        // Add players to the map
-        for (i = 0; i < *player_count; i++) {
-            map_data.map[*y][*x] = *sign;
-            x += G_OFFSET_P;
-            y += G_OFFSET_P;
-            sign += G_OFFSET_P;
-        }
-        for (i = 0; i<map_data.height; i++) {
-            //Actual drawing
-            printf("\t%s", map_data.map[i]);
-            printf("\t\t%s\n", message_array[message_count-i-1]);
-        }
-        printf("\n");
-        x = (uint8_t*) buf+G_OFFSET_C+2;
-        y = (uint8_t*) buf+G_OFFSET_C+3;
-        // Remove players from the map
-        for (i = 0; i < *player_count; i++) {
-            map_data.map[*y][*x] = ' ';
-            x += G_OFFSET_P;
-            y += G_OFFSET_P;
-            sign += G_OFFSET_P;
-        }
+            // Add players to the map
+            for (i = 0; i < *player_count; i++) {
+                map_data.map[*y][*x] = *sign;
+                x += G_OFFSET_P;
+                y += G_OFFSET_P;
+                sign += G_OFFSET_P;
+            }
+            for (i = 0; i < map_data.height; i++) {
+                //Actual drawing
+                printf("\t%s", map_data.map[i]);
+                printf("\t\t%s\n", message_array[i]);
+            }
+            x = (uint8_t*) buf+G_OFFSET_C+2;
+            y = (uint8_t*) buf+G_OFFSET_C+3;
+            // Remove players from the map
+            for (i = 0; i < *player_count; i++) {
+                map_data.map[*y][*x] = ' ';
+                x += G_OFFSET_P;
+                y += G_OFFSET_P;
+                sign += G_OFFSET_P;
+            }
 
-        printf("DEBUG: Drawing loop: %d. Press 'h' for help\n", draw_count++);
-        pthread_mutex_unlock(c->lock);
+            printf("\nDEBUG: Drawing loop: %d. Press 'h' for help\n", draw_count++);
+            pthread_mutex_unlock(c->lock);
+        }
     }
 
     free_memory(buf);
     freeMap(&map_data);
-    
+
     // Free memory allocated for messages
     for(i = 0; i<message_count; i++) {
         free(message_array[i]);
