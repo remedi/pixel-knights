@@ -140,36 +140,29 @@ int main(int argc, char *argv[]) {
     ssize_t bytes;
     char my_id, map_nr;
     char my_name[10];
+    memset(my_name, 0, 10);
     struct termios save_term, conf_term;
     int sock = 0;
     int exit_clean = 0;
-    volatile sig_atomic_t thread_complete = 0;
 
-
-    if(argc == 3 || argc == 2) {
-        printf("Joining a multiplayer game..\n");
-        printf("Enter name: ");
-        if(fgets(my_name, 10, stdin) == NULL) {
-            perror("fgets");
-        }
-        if(strlen(my_name) == 1) {
-            //Default name if user only pressed enter
-            strcpy(my_name, "Default");
-        }
-        else {
-            //Remove last newline:
-            my_name[strlen(my_name)-1] = '\0';
-        }
-        if(argc == 3) {
-            sock_addr_in = ipv4_parser(argv[1], argv[2]);
-        }
-        else {
-            sock_addr_in = ipv4_parser("localhost", argv[1]);
-        }
-    }
-    else {
+    if (argc != 3 && argc != 2) {
         printf("Usage: client <ipv4> <port>\n");
         exit(EXIT_FAILURE);
+    }
+    if (argc == 3)
+        sock_addr_in = ipv4_parser(argv[1], argv[2]);
+    else
+        sock_addr_in = ipv4_parser("localhost", argv[1]);
+
+    printf("Joining pixel knights multiplayer game...\n");
+    // Force the player to input a valid name
+    while (strlen(my_name) < 1) {
+        printf("Enter name: ");
+        if (fgets(my_name, 10, stdin) == NULL) {
+            perror("fgets");
+            exit(EXIT_FAILURE);
+        }
+        my_name[strlen(my_name)-1] = '\0';
     }
 
     //Get terminal settings
@@ -200,20 +193,20 @@ int main(int argc, char *argv[]) {
     }
 
     while(!exit_clean) {
-        //Setup socket
-        sock = socket(AF_INET, SOCK_STREAM, 0);
-        if(sock < 0) {
+        // Setup socket
+        if ((sock = socket(AF_INET, SOCK_STREAM, 0)) == 0) {
             perror("socket");
+            exit_clean = 1;
         }
-        //Connect to the socket
+        // Connect to the socket
         printf("main: Connecting to server..\n");
-        if(connect(sock, (struct sockaddr *) &sock_addr_in, sizeof(sock_addr_in)) == -1) {
+        if (connect(sock, (struct sockaddr *) &sock_addr_in, sizeof(sock_addr_in)) == -1) {
             perror("main, connect");
             printf("Exiting since connection failed\n");
             exit_clean = 1;
         }
-        if(!exit_clean) {
-            //Send hello message to server
+        if (!exit_clean) {
+            // Send hello message to server
             memset(buffer, '\0', BUFLEN);
             sprintf(buffer, "H%s", my_name);
             printf("main: Sending 'hello' message to the server: %s\n", buffer);
@@ -222,7 +215,7 @@ int main(int argc, char *argv[]) {
                 exit_clean = 1;
             }
             memset(buffer, '\0', BUFLEN);
-            //Read message from socket. It starts with I if its map server, and L if its MM server
+            // Read message from socket. It starts with I if its map server, and L if its MM server
             if(read(sock, buffer, BUFLEN) < 1) {
                 perror("main, read");
                 exit_clean = 1;
@@ -240,20 +233,10 @@ int main(int argc, char *argv[]) {
                     exit_clean = 1;
                     break;
                 }
-                //printf("main: Received serverlist, parsing first address\n");
-                /*strtok(buffer, " ");
-                //Use these pointers again. We are going another loop inside while.
-                argv[1] = strtok(NULL, " ");
-                argv[2] = strtok(NULL, " ");
-                argc = 3;
-                sock_addr_in = ipv4_parser(argv[1], argv[2]);*/
                 sock_addr_in = serverListParser(buffer);
-                //redir_port = strtok(NULL, " ");
-                //ipv4_parser(redir_ip, redir_port);
             }
             else {
                 printf("Unexpected message from server: %s\n", buffer);
-                //exit(EXIT_FAILURE);
                 exit_clean = 1;
             }
         }
@@ -263,7 +246,6 @@ int main(int argc, char *argv[]) {
     Context_client_thread ctx;
     ctx.sock = &sock;
     ctx.lock = &mtx;
-    ctx.done = &thread_complete; 
     ctx.map_nr = &map_nr;
     ctx.main_exit = &exit_clean;
     if(pthread_create(&thread, NULL, updateMap, &ctx) < 0) {
@@ -309,8 +291,8 @@ int main(int argc, char *argv[]) {
             bytes = write(sock, buffer, 3);
         }
 
-        // Thread sets this flag when completed
-        if (thread_complete)
+        // Thread can also set this flag when completed
+        if (exit_clean)
             break;
     }
 

@@ -62,7 +62,7 @@ void *updateMap(void *ctx) {
 
     // Initialize mapdata
     if (createMap(&map_data, *map_nr) == -1) {
-        printf("thread: error with createMap\n");
+        printf("thread: Error with createMap\n");
     }
 
     //Reserve memory for chat service
@@ -85,7 +85,7 @@ void *updateMap(void *ctx) {
             continue;
         }
         else if (bytes == 0) {
-            printf("thread: Server likely disconnected\n");
+            printf("thread: Socket closed unexpectedly\n");
             break_flag = 0;
             continue;
         }
@@ -96,7 +96,7 @@ void *updateMap(void *ctx) {
         }
         else if (buf[0] == 'G') {
             if ((bytes - 2) % 4 != 0) {
-                printf("Faulty G message length: %zu\n", bytes);
+                printf("thread: Faulty G message length: %zu\n", bytes);
                 continue;
             }
             player_count = (uint8_t*) buf+G_OFFSET_C;
@@ -149,7 +149,7 @@ void *updateMap(void *ctx) {
     }
     free(message_array);
 
-    *c->done = 1;
-    printf("thread: Server hung up unexpectedly, exiting\n");
+    *c->main_exit = 1;
+    printf("thread: Exiting...\n");
     return 0;
 }

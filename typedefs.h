@@ -29,7 +29,6 @@ struct gamestate_s {
 typedef struct context_client {
     int* sock;
     pthread_mutex_t* lock;
-    volatile sig_atomic_t* done;
     int *main_exit;
     char *map_nr;
 } Context_client_thread;
