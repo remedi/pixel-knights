@@ -155,7 +155,7 @@ int main(int argc, char *argv[]) {
     // Initiate thread that keeps sending the clients the game state
     pthread_mutex_t lock;
     pthread_mutex_init(&lock, NULL);
-    Contex_server_thread ctx;
+    Context_server_thread ctx;
     ctx.g = &game;
     ctx.lock = &lock;
     if (pthread_create(&gamestate_thread, NULL, sendGamestate, &ctx) < 0) {

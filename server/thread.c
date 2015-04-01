@@ -20,7 +20,7 @@ void* sendGamestate(void* ctx) {
 
     // Init variables
     char sendbuf[MAXDATASIZE];
-    Contex_server_thread* c = (Contex_server_thread *) ctx;
+    Context_server_thread* c = (Context_server_thread *) ctx;
     Gamestate* g = c->g;
     Gamestate* game = g;
     int status, nbytes;

@@ -264,7 +264,7 @@ int main(int argc, char *argv[]) {
     }
 
     // Fill the thread context struct and start the thread for updating map
-    Contex_client_thread ctx;
+    Context_client_thread ctx;
     ctx.sock = &sock;
     ctx.lock = &mtx;
     ctx.done = &thread_complete; 
