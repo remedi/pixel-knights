@@ -32,7 +32,12 @@ def createServerList(serverList):
 def getOwnAddr():
   #Connect to google server
   try:
+    #IPv4 server:
     ownAddr = socket.create_connection(('8.8.8.8', 53), 5)
+
+    #Uncomment this for creating IPv6 server:
+    #ownAddr = socket.create_connection(('2001:4860:4860::8888', 53), 5)
+
     #Retrieve own IP
     my_IP = ownAddr.getsockname()[0]
     ownAddr.close()
@@ -46,7 +51,11 @@ def main():
 
   my_IP = getOwnAddr()
   port = 3500
-  clientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+  #Determine if we're IPv4 or IPv6:
+  if(my_IP.count('.') > my_IP.count(':')):
+    clientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+  else:
+    clientSocket = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
   #All servers that have announced themselves are added to this list:
   serverList = []
   
