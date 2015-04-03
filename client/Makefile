@@ -7,7 +7,7 @@ default: client
 debug: client.c update.c ../maps/maps.c
 	$(CC) $(CFLAGS) $(LFLAGS) -g -o client client.c update.c ../maps/maps.c
 
-client: client.o update.o maps.o
+client: client.o update.o ../maps/maps.o
 	$(CC) $(CFLAGS) $(LFLAGS) -o client client.o update.o ../maps/maps.o
 
 client.o: client.c
