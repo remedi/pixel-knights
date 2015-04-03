@@ -25,13 +25,36 @@
 //Mutex for preventing map updates when player is writing a chat message or reading help
 pthread_mutex_t mtx = PTHREAD_MUTEX_INITIALIZER;
 
+//Return 1 for IPv4 and 0 for all the others (We expect IPv6 then)
+int isIpv4(char *buf) {
+    int len = strlen(buf);
+    int dot_count = 0, colon_count = 0, i;
+    for(i = 0; i < len; i++) {
+	if(buf[i] == '.')
+	    dot_count++;
+	if(buf[i] == ':')
+	    colon_count++;
+    }
+    //Simple sanity check:
+    if(dot_count == 0 && colon_count == 0)
+	return -1;
+
+    if(dot_count > colon_count)
+	return 1;
+    else
+	return 0;
+}
+
+
 //Parse list from from given buffer, that contains serverlist.
 //Present that list to user and ask which server they want to connect.
-struct sockaddr_in serverListParser(char *buf) {
+struct sockaddr *serverListParser(char *buf) {
 
     // Server count is an ASCII number
     int server_count = buf[1] - '0';
     struct sockaddr_in serverAddr; 
+    struct sockaddr_in6 serverAddr6; 
+    struct sockaddr *addr_ptr;
     memset(&serverAddr, 0, sizeof(struct sockaddr_in));
     int i = 0, user_input = -1;
     char **server_array = malloc(sizeof(char*) * server_count);
@@ -56,10 +79,29 @@ struct sockaddr_in serverListParser(char *buf) {
     // Fill sockaddr_in from ipv4_parser
     ip = strtok(server_array[user_input], " ");
     port = strtok(NULL, " ");
-    serverAddr = ipv4_parser(ip, port);
+    if(isIpv4(ip)) {
+	serverAddr = ipv4_parser(ip, port);
+	addr_ptr = (struct sockaddr *) &serverAddr;
+    }
+    else {
+	serverAddr6 = ipv6_parser(ip, port);
+	addr_ptr = (struct sockaddr *) &serverAddr6;
+    }
 
     free(server_array);
-    return serverAddr;
+    return addr_ptr;
+}
+
+//Parse ip and port from character strings to a struct sockaddr_in6.
+struct sockaddr_in6 ipv6_parser(char *ip, char *port) {
+  struct sockaddr_in6 temp;
+  if(inet_pton(AF_INET6, ip, &temp.sin6_addr) < 1) {
+    perror("ipv6_parser, inet_pton");
+    exit(-1);
+  }
+  temp.sin6_port = ntohs(strtol(port, NULL, 10));
+  temp.sin6_family = AF_INET6;
+  return temp;
 }
 
 //Parse ip and port from character strings to a struct sockaddr_in.
@@ -134,6 +176,8 @@ char *processCommand(char id, char input, char *buf) {
 int main(int argc, char *argv[]) {
     char input_char = 1;
     struct sockaddr_in sock_addr_in;
+    struct sockaddr_in6 sock_addr_in6;
+    struct sockaddr *addr_ptr;
     char *buffer = malloc(BUFLEN);
     char *chat_buffer = malloc(BUFLEN);
     pthread_t thread;
@@ -144,19 +188,34 @@ int main(int argc, char *argv[]) {
     struct termios save_term, conf_term;
     int sock = 0;
     int exit_clean = 0;
+    int isIp4;
+    socklen_t sock_len;
 
     if (argc != 3 && argc != 2) {
         printf("Usage: client <ipv4> <port>\n");
         exit(EXIT_FAILURE);
     }
-    if (argc == 3)
-        sock_addr_in = ipv4_parser(argv[1], argv[2]);
-    else
+    if (argc == 3) {
+	isIp4 = isIpv4(argv[1]);
+	if(isIp4) {
+	    sock_addr_in = ipv4_parser(argv[1], argv[2]);
+	    sock_len = sizeof(sock_addr_in);
+	    addr_ptr = (struct sockaddr *) &sock_addr_in;
+	}
+	else {
+	    sock_addr_in6 = ipv6_parser(argv[1], argv[2]);
+	    sock_len = sizeof(sock_addr_in6);
+	    addr_ptr = (struct sockaddr *) &sock_addr_in6;
+	}
+    }
+    else {
         sock_addr_in = ipv4_parser("localhost", argv[1]);
+	addr_ptr = (struct sockaddr *) &sock_addr_in;
+    }
 
     printf("Joining pixel knights multiplayer game...\n");
     // Force the player to input a valid name
-    while (strlen(my_name) < 1) {
+    while (strlen(my_name) < 1 || my_name[0] == ' ') {
         printf("Enter name: ");
         if (fgets(my_name, 10, stdin) == NULL) {
             perror("fgets");
@@ -184,7 +243,7 @@ int main(int argc, char *argv[]) {
     }
     else {
         if((conf_term.c_lflag & (ICANON | ECHO | ECHONL)) == 0) {
-            printf("main: Terminal settings succesfully changed\n");
+            //printf("main: Terminal settings succesfully changed\n");
         }
         else {
             perror("main: Error with term setattr");
@@ -192,15 +251,23 @@ int main(int argc, char *argv[]) {
         }
     }
 
+    //Setup connection. There maybe multiple loops if we first connect to a MM server
     while(!exit_clean) {
-        // Setup socket
-        if ((sock = socket(AF_INET, SOCK_STREAM, 0)) == 0) {
-            perror("socket");
-            exit_clean = 1;
-        }
-        // Connect to the socket
+	if(isIp4) {
+	    if ((sock = socket(AF_INET, SOCK_STREAM, 0)) == 0) {
+		perror("socket, IPv4");
+		exit_clean = 1;
+	    }
+	}
+	else {
+	    if ((sock = socket(AF_INET6, SOCK_STREAM, 0)) == 0) {
+		perror("socket, IPv6");
+		exit_clean = 1;
+	    }
+	}
+        // Connect to a server. It can be MM server or map server
         printf("main: Connecting to server..\n");
-        if (connect(sock, (struct sockaddr *) &sock_addr_in, sizeof(sock_addr_in)) == -1) {
+        if (connect(sock, addr_ptr, sock_len) == -1) {
             perror("main, connect");
             printf("Exiting since connection failed\n");
             exit_clean = 1;
@@ -209,7 +276,7 @@ int main(int argc, char *argv[]) {
             // Send hello message to server
             memset(buffer, '\0', BUFLEN);
             sprintf(buffer, "H%s", my_name);
-            printf("main: Sending 'hello' message to the server: %s\n", buffer);
+            //printf("main: Sending 'hello' message to the server: %s\n", buffer);
             if(write(sock, buffer, strlen(buffer) + 1) < 1) {
                 perror("main, write");
                 exit_clean = 1;
@@ -233,7 +300,7 @@ int main(int argc, char *argv[]) {
                     exit_clean = 1;
                     break;
                 }
-                sock_addr_in = serverListParser(buffer);
+                addr_ptr = serverListParser(buffer);
             }
             else {
                 printf("Unexpected message from server: %s\n", buffer);
@@ -252,6 +319,7 @@ int main(int argc, char *argv[]) {
         perror("main, pthread_create");
     }
 
+    //This loop will constantly read user input
     while(!exit_clean) {
         memset(buffer, '\0', BUFLEN);
         //Get character or message from terminal
@@ -296,10 +364,10 @@ int main(int argc, char *argv[]) {
             break;
     }
 
-    printf("\nmain: Commencing cleanup\n");
+    //printf("\nmain: Commencing cleanup\n");
 
     //Perform cleanup:
-    printf("main: Waiting for map update thread to exit\n");
+    //printf("main: Waiting for map update thread to exit\n");
     if(pthread_join(thread, NULL) < 0) {
         perror("pthread_join");
     }
@@ -315,12 +383,13 @@ int main(int argc, char *argv[]) {
         perror("tcgetattr");
     }
     if(conf_term.c_lflag == save_term.c_lflag) {
-        printf("main: Old terminal settings succesfully restored\n");
+        //printf("main: Old terminal settings succesfully restored\n");
     }
     else {
         printf("main: Error restoring terminal settings. Old: %d New: %d\n", save_term.c_lflag, conf_term.c_lflag);
     }
 
-    printf("main: Cleanup done, exiting\n");
+    //printf("main: Cleanup done, exiting\n");
+    printf("Game over, goodbye!\n");
     exit(0);
 }
