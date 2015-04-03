@@ -22,7 +22,7 @@
 
 // Frees memory pointed by 'ptr'. Used as thread cleanup handler
 void free_memory(void *ptr) {
-    printf("thread: Freeing my memory\n");
+    //printf("thread: Freeing my memory\n");
     free(ptr);
 }
 
@@ -73,7 +73,7 @@ void *updateMap(void *ctx) {
         memset(message_array[i], '\0', MSGLEN);
     }
 
-    printf("thread: Reading socket %d\n", *c->sock);
+    //printf("thread: Reading socket %d\n", *c->sock);
     while (break_flag && !*c->main_exit) {
         // Clean message buffer
         memset(buf, '\0', BUFLEN);
@@ -120,6 +120,8 @@ void *updateMap(void *ctx) {
                 y += G_OFFSET_P;
                 sign += G_OFFSET_P;
             }
+	    //Print 1 newline in order to start drawing from the second line:
+	    printf("\n");
             for (i = 0; i < map_data.height; i++) {
                 //Actual drawing
                 printf("\t%s", map_data.map[i]);
@@ -150,6 +152,6 @@ void *updateMap(void *ctx) {
     free(message_array);
 
     *c->main_exit = 1;
-    printf("thread: Exiting...\n");
+    //printf("thread: Exiting...\n");
     return 0;
 }
