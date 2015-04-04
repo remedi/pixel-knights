@@ -22,8 +22,17 @@ struct gamestate_s {
     Coord c;
     char sign;
     int sock;
+    char data;
     Gamestate* next;
 };
+
+// Data structure for map loaded from a file
+typedef struct mapdata {
+    uint8_t height;
+    uint8_t width;
+    uint8_t map_nr;
+    char **map;
+} Mapdata;
 
 // Context struct for client thread
 typedef struct context_client {
@@ -36,6 +45,7 @@ typedef struct context_client {
 // Context struct for server thread
 typedef struct context_server {
     Gamestate* g;
+    Mapdata* m;
     pthread_mutex_t* lock;
 } Context_server_thread;
 
@@ -45,16 +55,10 @@ typedef enum {
     DOWN,
     RIGHT,
     LEFT,
-    ATTACK,
-    SHOOT
+    SHOOT_UP,
+    SHOOT_DOWN,
+    SHOOT_LEFT,
+    SHOOT_RIGHT
 } Action;
-
-// Data structure for map loaded from a file
-typedef struct mapdata {
-    uint8_t height;
-    uint8_t width;
-    uint8_t map_nr;
-    char **map;
-} Mapdata;
 
 #endif
