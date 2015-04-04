@@ -22,12 +22,12 @@ void* sendGamestate(void* ctx) {
     char sendbuf[MAXDATASIZE];
     Context_server_thread* c = (Context_server_thread *) ctx;
     Gamestate* g = c->g;
+    Mapdata* m = c->m;
     Gamestate* game = g;
-    int status, nbytes;
+    int status, nbytes, i = 0;
 
     // Keep sending the game state to clients until thread_cancel()
     while(1) {
-
         // Thread keeps sending the updates with G_INTERVAL seconds interval
         usleep(G_INTERVAL_USEC);
 
@@ -36,6 +36,13 @@ void* sendGamestate(void* ctx) {
 
         // Lock the game state for reading
         pthread_mutex_lock(c->lock);
+
+	// Move bullets once every second so they can still be debugged.
+	i++;
+	if(i % 10 == 0) {
+	    updateBullets(game, m);
+	}
+
 
         // Parse game state message
         status = parseGamestate(game, sendbuf, MAXDATASIZE);
@@ -59,6 +66,11 @@ void* sendGamestate(void* ctx) {
         // Send game state to every client
         g = game;
         while (g->next != NULL) {
+	    //Don't send to bullets etc
+	    if(g->next->sock == -1) {
+		g = g->next;
+		continue;
+	    }
             if ((nbytes = send(g->next->sock, sendbuf, status, 0)) == -1) {
                 perror("Thread: send error");
             }

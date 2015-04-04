@@ -150,6 +150,10 @@ int sendAnnounce(Gamestate* g, char* msg, size_t len, ID id) {
             g = g->next;
             continue;
         }
+	if(g->sock == -1) {
+	    g = g->next;
+	    continue;
+	}
         if (send(g->sock, msg, len, 0) < 0) {
             perror("send error");
             return -3;

@@ -185,6 +185,7 @@ int main(int argc, char *argv[]) {
     pthread_mutex_init(&lock, NULL);
     Context_server_thread ctx;
     ctx.g = &game;
+    ctx.m = &mapdata;
     ctx.lock = &lock;
     if (pthread_create(&gamestate_thread, NULL, sendGamestate, &ctx) < 0) {
         perror("pthread_create error");
@@ -283,6 +284,10 @@ int main(int argc, char *argv[]) {
                             fprintf(stderr, "movePlayer %02x: Action not found\n", id);
                             continue;
                         }
+                        else if (status == -5) {
+                            fprintf(stderr, "movePlayer %02x: Creating new bullet failed\n", id);
+                            continue;
+                        }
                     }
 
                     // If the message starts with H the message is a Hello-message
@@ -314,7 +319,7 @@ int main(int argc, char *argv[]) {
 
                         // Lock game state and add player
                         pthread_mutex_lock(&lock);
-                        status = addPlayer(&game, id, c, i, recvbuf[1]);
+                        status = addPlayer(&game, id, c, i, recvbuf[1], 0);
                         pthread_mutex_unlock(&lock);
 
                         if (status == -1) {
@@ -417,7 +422,7 @@ int main(int argc, char *argv[]) {
                     else if (!strncmp(recvbuf, "P", 1)) {
                         sendbuf[0] = 'R';
                         pthread_mutex_lock(&lock);
-                        sendbuf[1] = getSize(&game) + '0';
+                        sendbuf[1] = getPlayerCount(&game) + '0';
                         pthread_mutex_unlock(&lock);
                         if (send(i, sendbuf, 2, 0) < 0)
                             perror("send");

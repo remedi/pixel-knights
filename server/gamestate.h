@@ -7,16 +7,25 @@
 #include "../typedefs.h"
 
 // Adds player to the gamestate linked-list
-int addPlayer(Gamestate*, ID, Coord, int, char);
+int addPlayer(Gamestate*, ID, Coord, int, char, char);
 
 // Finds pointer to the Gamestate struct containing ID
 Gamestate* findPlayer(Gamestate*, ID);
 
-// Gets the amount of players in Gamestate
+// Gets the amount of elements in Gamestate
 uint8_t getSize(Gamestate*);
+
+// Gets the amount of players in Gamestate
+uint8_t getPlayerCount(Gamestate*);
 
 // Moves player to the destination Coord
 int movePlayer(Gamestate*, Mapdata *, ID, Action);
+
+// Add bullet to the gamestate ll
+int addBullet(Gamestate*, Mapdata *, ID, Action);
+
+//Move each bullet once
+int updateBullets(Gamestate*, Mapdata*);
 
 // Changes the sign of the player
 int changePlayerSign(Gamestate*, ID, char);
