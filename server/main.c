@@ -38,9 +38,10 @@ int main(int argc, char *argv[]) {
     fd_set rdset, master;
     char* recvbuf = malloc(MAXDATASIZE * sizeof(char));
     char* sendbuf = malloc(MAXDATASIZE * sizeof(char));
-    char ipstr[INET_ADDRSTRLEN];
+    char ipstr[INET6_ADDRSTRLEN];
     ssize_t nbytes; 
     pthread_t gamestate_thread;
+    int IP4;
 
     // Initialize game state
     Gamestate game;
@@ -86,8 +87,9 @@ int main(int argc, char *argv[]) {
             fprintf(stderr, "Something went wrong while connecting to MM server\n");
             exit(EXIT_FAILURE);
         }
+	IP4 = isIpv4(argv[2]);
         // Create public IP socket
-	if(isIpv4(argv[2])) {
+	if(IP4) {
 	    if ((listenfd = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
 		perror("socket");
 		exit(EXIT_FAILURE);
@@ -103,7 +105,7 @@ int main(int argc, char *argv[]) {
             perror("setsockopt");
             exit(EXIT_FAILURE);
         }
-	if(isIpv4(argv[2])) {
+	if(IP4) {
 	    if (bind(listenfd, (struct sockaddr *) &my_IP, sizeof(struct sockaddr_in)) == -1) {
 		perror("bind");
 		exit(EXIT_FAILURE);
@@ -116,9 +118,14 @@ int main(int argc, char *argv[]) {
 	    }
 	}
 
-
-        inet_ntop(AF_INET, (void *) &my_IP.sin_addr, ipstr, INET_ADDRSTRLEN);
-        printf("Server Port: %d\n", ntohs(my_IP.sin_port));
+	if(IP4) {
+	    inet_ntop(AF_INET, (void *) &my_IP.sin_addr, ipstr, INET_ADDRSTRLEN);
+	    printf("Server Port: %d\n", ntohs(my_IP.sin_port));
+	}
+	else {
+	    inet_ntop(AF_INET6, (void *) &my_IP6.sin6_addr, ipstr, INET6_ADDRSTRLEN);
+	    printf("Server Port: %d\n", ntohs(my_IP6.sin6_port));
+	}
     }
     // Create local socket
     else {
@@ -204,8 +211,14 @@ int main(int argc, char *argv[]) {
                 continue;
             }
             // Print the address from where the connection came
-            inet_ntop(AF_INET, &((struct sockaddr_in*)&their_addr)->sin_addr,\
-                    recvbuf, INET_ADDRSTRLEN);
+	    if(IP4) {
+		inet_ntop(AF_INET, &((struct sockaddr_in*)&their_addr)->sin_addr,\
+			  recvbuf, INET_ADDRSTRLEN);
+	    }
+	    else {
+		inet_ntop(AF_INET6, &((struct sockaddr_in6*)&their_addr)->sin6_addr,\
+			  recvbuf, INET6_ADDRSTRLEN);
+	    }
             printf("New connection accepted from %s!\n", recvbuf);
 
             // Clear their_addr and socklen

@@ -129,7 +129,8 @@ int main(int argc, char *argv[]) {
     struct termios save_term, conf_term;
     int sock = 0;
     int exit_clean = 0;
-    int isIp4;
+    int IP4;
+    int domain;
     socklen_t sock_len;
 
     if (argc != 3 && argc != 2) {
@@ -137,16 +138,18 @@ int main(int argc, char *argv[]) {
         exit(EXIT_FAILURE);
     }
     if (argc == 3) {
-	isIp4 = isIpv4(argv[1]);
-	if(isIp4) {
+	IP4 = isIpv4(argv[1]);
+	if(IP4) {
 	    sock_addr_in = ipv4_parser(argv[1], argv[2]);
 	    sock_len = sizeof(sock_addr_in);
 	    addr_ptr = (struct sockaddr *) &sock_addr_in;
+	    domain = AF_INET;
 	}
 	else {
 	    sock_addr_in6 = ipv6_parser(argv[1], argv[2]);
 	    sock_len = sizeof(sock_addr_in6);
 	    addr_ptr = (struct sockaddr *) &sock_addr_in6;
+	    domain = AF_INET6;
 	}
     }
     else {
@@ -194,18 +197,11 @@ int main(int argc, char *argv[]) {
 
     //Setup connection. There maybe multiple loops if we first connect to a MM server
     while(!exit_clean) {
-	if(isIp4) {
-	    if ((sock = socket(AF_INET, SOCK_STREAM, 0)) == 0) {
-		perror("socket, IPv4");
-		exit_clean = 1;
-	    }
+	if ((sock = socket(domain, SOCK_STREAM, 0)) == 0) {
+	    perror("socket, IPv6");
+	    exit_clean = 1;
 	}
-	else {
-	    if ((sock = socket(AF_INET6, SOCK_STREAM, 0)) == 0) {
-		perror("socket, IPv6");
-		exit_clean = 1;
-	    }
-	}
+
         // Connect to a server. It can be MM server or map server
         printf("main: Connecting to server..\n");
         if (connect(sock, addr_ptr, sock_len) == -1) {
@@ -248,16 +244,18 @@ int main(int argc, char *argv[]) {
 		}
 		ip = strtok(buffer, " ");
 		port = strtok(NULL, " ");
-		isIp4 = isIpv4(ip);
-		if(isIp4) {
+		IP4 = isIpv4(ip);
+		if(IP4) {
 		    sock_addr_in = ipv4_parser(ip, port);
 		    sock_len = sizeof(sock_addr_in);
 		    addr_ptr = (struct sockaddr *) &sock_addr_in;
+		    domain = AF_INET;
 		}
 		else {
 		    sock_addr_in6 = ipv6_parser(ip, port);
 		    sock_len = sizeof(sock_addr_in6);
 		    addr_ptr = (struct sockaddr *) &sock_addr_in6;
+		    domain = AF_INET6;
 		}
             }
             else {

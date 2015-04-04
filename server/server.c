@@ -24,13 +24,15 @@ int registerToMM(char *MM_IP, char *MM_port, char map_nr, struct sockaddr_in* my
     char message[2];
     socklen_t my_IP_len = sizeof(struct sockaddr_in);
     socklen_t my_IP6_len = sizeof(struct sockaddr_in6);
+    int IP4;
 
     // The message sent to MM server contains 'S' + map number
     message[0] = 'S';
     message[1] = map_nr;
 
     // Parse address and port
-    if(isIpv4(MM_IP)) {
+    IP4 = isIpv4(MM_IP);
+    if(IP4) {
 	sock_addr_in = ipv4_parser(MM_IP, MM_port);
 	if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
 	    perror("MM socket, create");
@@ -66,7 +68,7 @@ int registerToMM(char *MM_IP, char *MM_port, char map_nr, struct sockaddr_in* my
 
     // OK reply from MM
     if (message[0] == 'O') {
-	if(isIpv4(MM_IP)) {
+	if(IP4) {
 	    if (getsockname(sock, (struct sockaddr *) my_IP, &my_IP_len) == -1) {
 		perror("getsockname");
 		return -1;
