@@ -3,8 +3,8 @@ CFLAGS=-std=gnu99 -Wall -Wextra -pedantic -pthread
 
 default: server
 
-debug: server.c gamestate.c thread.c main.c ../maps/maps.c
-	$(CC) $(CFLAGS) -o server -g server.c gamestate.c thread.c main.c ../maps/maps.c
+debug: server.c gamestate.c thread.c main.c ../maps/maps.c ../address.c
+	$(CC) $(CFLAGS) -o server -g server.c gamestate.c thread.c main.c ../maps/maps.c ../address.c
 
 server: server.o gamestate.o thread.o main.o ../maps/maps.o ../address.o
 	$(CC) $(CFLAGS) -o server server.o gamestate.o thread.o main.o ../maps/maps.o ../address.o

@@ -5,7 +5,7 @@ LFLAGS=-pthread
 default: client
 
 debug: client.c update.c ../maps/maps.c ../address.c
-	$(CC) $(CFLAGS) $(LFLAGS) -g -o client client.c update.c ../maps/maps.c
+	$(CC) $(CFLAGS) $(LFLAGS) -g -o client client.c update.c ../maps/maps.c ../address.c
 
 client: client.o update.o ../maps/maps.o ../address.o
 	$(CC) $(CFLAGS) $(LFLAGS) -o client client.o update.o ../maps/maps.o ../address.o
