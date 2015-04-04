@@ -36,7 +36,7 @@ def getOwnAddr():
     ownAddr = socket.create_connection(('8.8.8.8', 53), 5)
 
     #Uncomment this for creating IPv6 server:
-    #ownAddr = socket.create_connection(('2001:4860:4860::8888', 53), 5)
+    ownAddr = socket.create_connection(('2001:4860:4860::8888', 53), 5)
 
     #Retrieve own IP
     my_IP = ownAddr.getsockname()[0]
