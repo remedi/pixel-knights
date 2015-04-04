@@ -16,6 +16,7 @@
 #include <sys/un.h>
 
 #include "../maps/maps.h"
+#include "../address.h"
 #include "client.h"
 #include "update.h"
 
@@ -24,27 +25,6 @@
 
 //Mutex for preventing map updates when player is writing a chat message or reading help
 pthread_mutex_t mtx = PTHREAD_MUTEX_INITIALIZER;
-
-//Return 1 for IPv4 and 0 for all the others (We expect IPv6 then)
-int isIpv4(char *buf) {
-    int len = strlen(buf);
-    int dot_count = 0, colon_count = 0, i;
-    for(i = 0; i < len; i++) {
-	if(buf[i] == '.')
-	    dot_count++;
-	if(buf[i] == ':')
-	    colon_count++;
-    }
-    //Simple sanity check:
-    if(dot_count == 0 && colon_count == 0)
-	return -1;
-
-    if(dot_count > colon_count)
-	return 1;
-    else
-	return 0;
-}
-
 
 //Parse list from from given buffer, that contains serverlist. 
 //Present that list to user and ask which server they want to connect.
@@ -76,30 +56,6 @@ int serverListParser(char *buf) {
 
     free(server_array);
     return 0;
-}
-
-//Parse ip and port from character strings to a struct sockaddr_in6.
-struct sockaddr_in6 ipv6_parser(char *ip, char *port) {
-  struct sockaddr_in6 temp;
-  if(inet_pton(AF_INET6, ip, &temp.sin6_addr) < 1) {
-    perror("ipv6_parser, inet_pton");
-    exit(-1);
-  }
-  temp.sin6_port = ntohs(strtol(port, NULL, 10));
-  temp.sin6_family = AF_INET6;
-  return temp;
-}
-
-//Parse ip and port from character strings to a struct sockaddr_in.
-struct sockaddr_in ipv4_parser(char *ip, char *port) {
-    struct sockaddr_in temp; 
-    memset(&temp, 0, sizeof(struct sockaddr_in));
-    if(inet_pton(AF_INET, ip, &temp.sin_addr) < 1) {
-        perror("ipv4_parser, inet_pton");
-    }
-    temp.sin_port = ntohs(strtol(port, NULL, 10));
-    temp.sin_family = AF_INET;
-    return temp;
 }
 
 //Read input character or chat message from terminal. If it's a chat message, store it in buffer.
@@ -157,7 +113,6 @@ char *processCommand(char id, char input, char *buf) {
     memcpy(buf+2, &a, 1);
     return buf;
 }
-
 
 int main(int argc, char *argv[]) {
     char input_char = 1;
@@ -293,7 +248,8 @@ int main(int argc, char *argv[]) {
 		}
 		ip = strtok(buffer, " ");
 		port = strtok(NULL, " ");
-		if(isIpv4(ip)) {
+		isIp4 = isIpv4(ip);
+		if(isIp4) {
 		    sock_addr_in = ipv4_parser(ip, port);
 		    sock_len = sizeof(sock_addr_in);
 		    addr_ptr = (struct sockaddr *) &sock_addr_in;
