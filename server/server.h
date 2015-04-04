@@ -19,6 +19,6 @@ int checkCollision(Gamestate*, Coord);
 int sendAnnounce(Gamestate*, char*, size_t, ID);
 
 // Register map server to matchmaking server
-int registerToMM(char *, char *, char, struct sockaddr_in*);
+int registerToMM(char *, char *, char, struct sockaddr_in*, struct sockaddr_in6*);
 
 #endif

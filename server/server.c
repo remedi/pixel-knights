@@ -12,36 +12,45 @@
 #include <unistd.h>
 
 #include "../maps/maps.h"
+#include "../address.h"
 #include "server.h"
 #include "gamestate.h"
 
 // Announce map server to matchmaking server
-int registerToMM(char *MM_IP, char *MM_port, char map_nr, struct sockaddr_in* my_IP) {
+int registerToMM(char *MM_IP, char *MM_port, char map_nr, struct sockaddr_in* my_IP, struct sockaddr_in6* my_IP6) {
     int sock;
     struct sockaddr_in sock_addr_in;
+    struct sockaddr_in6 sock_addr_in6;
     char message[2];
     socklen_t my_IP_len = sizeof(struct sockaddr_in);
+    socklen_t my_IP6_len = sizeof(struct sockaddr_in6);
 
     // The message sent to MM server contains 'S' + map number
     message[0] = 'S';
     message[1] = map_nr;
 
     // Parse address and port
-    memset(&sock_addr_in, 0, sizeof(struct sockaddr_in));
-    if(inet_pton(AF_INET, MM_IP, &sock_addr_in.sin_addr) < 1) {
-        perror("ipv4_parser, inet_pton");
-        return -1;
+    if(isIpv4(MM_IP)) {
+	sock_addr_in = ipv4_parser(MM_IP, MM_port);
+	if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+	    perror("MM socket, create");
+	    return -1;
+	}
+	if (connect(sock, (struct sockaddr *) &sock_addr_in, sizeof(sock_addr_in)) == -1) {
+	    perror("MM socket, connect");
+	    return -1;
+	}
     }
-    sock_addr_in.sin_port = htons(strtol(MM_port, NULL, 10));
-    sock_addr_in.sin_family = AF_INET;
-
-    if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-        perror("MM socket, create");
-        return -1;
-    }
-    if (connect(sock, (struct sockaddr *) &sock_addr_in, sizeof(sock_addr_in)) == -1) {
-        perror("MM socket, connect");
-        return -1;
+    else {
+	sock_addr_in6 = ipv6_parser(MM_IP, MM_port);
+	if ((sock = socket(AF_INET6, SOCK_STREAM, 0)) < 0) {
+	    perror("MM socket, create");
+	    return -1;
+	}
+	if (connect(sock, (struct sockaddr *) &sock_addr_in6, sizeof(sock_addr_in6)) == -1) {
+	    perror("MM socket, connect");
+	    return -1;
+	}
     }
 
     // Send server information
@@ -57,10 +66,18 @@ int registerToMM(char *MM_IP, char *MM_port, char map_nr, struct sockaddr_in* my
 
     // OK reply from MM
     if (message[0] == 'O') {
-       if (getsockname(sock, (struct sockaddr *) my_IP, &my_IP_len) == -1) {
-            perror("getsockname");
-            return -1;
-        } 
+	if(isIpv4(MM_IP)) {
+	    if (getsockname(sock, (struct sockaddr *) my_IP, &my_IP_len) == -1) {
+		perror("getsockname");
+		return -1;
+	    } 
+	}
+	else {
+	    if (getsockname(sock, (struct sockaddr *) my_IP6, &my_IP6_len) == -1) {
+		perror("getsockname");
+		return -1;
+	    } 
+	}
         close(sock);
         return 0;
     }

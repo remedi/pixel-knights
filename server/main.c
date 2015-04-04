@@ -15,6 +15,7 @@
 #include <errno.h>
 
 #include "../maps/maps.h"
+#include "../address.h"
 #include "server.h"
 #include "gamestate.h"
 #include "thread.h"
@@ -30,6 +31,7 @@ int main(int argc, char *argv[]) {
     struct addrinfo* results, hints, *i;
     struct sockaddr_storage their_addr;
     struct sockaddr_in my_IP;
+    struct sockaddr_in6 my_IP6;
     socklen_t socklen = sizeof(struct sockaddr);
     int status, listenfd, new_fd, fdmax, yes = 1;
     char map_nr;
@@ -56,8 +58,10 @@ int main(int argc, char *argv[]) {
     hints.ai_flags = AI_PASSIVE;
 
     // Map default
-    if (argc == 1)
+    if (argc == 1) {
+	printf("Hosting a local game\n");
         map_nr = 1;
+    }
     // If player has defined map number
     else if (argc == 2 || argc == 4) {
         map_nr = strtol(argv[1], NULL, 10);
@@ -73,28 +77,45 @@ int main(int argc, char *argv[]) {
     }
     // Announce this server to MM server, if user has given map_nr, ip and port. 
     if (argc == 4) {
-        status = registerToMM(argv[2], argv[3], map_nr, &my_IP);
+        status = registerToMM(argv[2], argv[3], map_nr, &my_IP, &my_IP6);
         if (status == -1) {
             fprintf(stderr, "Could not connect to MM server\n");
             exit(EXIT_FAILURE);
         }
-        if (status == -2) {
+        else if (status == -2) {
             fprintf(stderr, "Something went wrong while connecting to MM server\n");
             exit(EXIT_FAILURE);
         }
         // Create public IP socket
-        if ((listenfd = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
-            perror("socket");
-            exit(EXIT_FAILURE);
-        }
+	if(isIpv4(argv[2])) {
+	    if ((listenfd = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
+		perror("socket");
+		exit(EXIT_FAILURE);
+	    }
+	}
+	else {
+	    if ((listenfd = socket(AF_INET6, SOCK_STREAM, 0)) == -1) {
+		perror("socket");
+		exit(EXIT_FAILURE);
+	    }
+	}
         if (setsockopt(listenfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1) {
             perror("setsockopt");
             exit(EXIT_FAILURE);
         }
-        if (bind(listenfd, (struct sockaddr *) &my_IP, sizeof(my_IP)) == -1) {
-            perror("bind");
-            exit(EXIT_FAILURE);
-        }
+	if(isIpv4(argv[2])) {
+	    if (bind(listenfd, (struct sockaddr *) &my_IP, sizeof(struct sockaddr_in)) == -1) {
+		perror("bind");
+		exit(EXIT_FAILURE);
+	    }
+	}
+	else {
+	    if (bind(listenfd, (struct sockaddr *) &my_IP6, sizeof(struct sockaddr_in6)) == -1) {
+		perror("bind");
+		exit(EXIT_FAILURE);
+	    }
+	}
+
 
         inet_ntop(AF_INET, (void *) &my_IP.sin_addr, ipstr, INET_ADDRSTRLEN);
         printf("Server Port: %d\n", ntohs(my_IP.sin_port));
