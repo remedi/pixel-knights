@@ -46,19 +46,15 @@ int isIpv4(char *buf) {
 }
 
 
-//Parse list from from given buffer, that contains serverlist.
+//Parse list from from given buffer, that contains serverlist. 
 //Present that list to user and ask which server they want to connect.
-struct sockaddr *serverListParser(char *buf) {
+//Copy server choosed by user to the start of argument buffer
+int serverListParser(char *buf) {
 
     // Server count is an ASCII number
     int server_count = buf[1] - '0';
-    struct sockaddr_in serverAddr; 
-    struct sockaddr_in6 serverAddr6; 
-    struct sockaddr *addr_ptr;
-    memset(&serverAddr, 0, sizeof(struct sockaddr_in));
     int i = 0, user_input = -1;
     char **server_array = malloc(sizeof(char*) * server_count);
-    char *ip, *port;
 
     // Parse the server list
     server_array[i] = strtok(buf+3, "\200");
@@ -76,20 +72,10 @@ struct sockaddr *serverListParser(char *buf) {
         user_input = getchar() - '0';
     }
 
-    // Fill sockaddr_in from ipv4_parser
-    ip = strtok(server_array[user_input], " ");
-    port = strtok(NULL, " ");
-    if(isIpv4(ip)) {
-	serverAddr = ipv4_parser(ip, port);
-	addr_ptr = (struct sockaddr *) &serverAddr;
-    }
-    else {
-	serverAddr6 = ipv6_parser(ip, port);
-	addr_ptr = (struct sockaddr *) &serverAddr6;
-    }
+    strncpy(buf, server_array[user_input], strlen(server_array[user_input]));
 
     free(server_array);
-    return addr_ptr;
+    return 0;
 }
 
 //Parse ip and port from character strings to a struct sockaddr_in6.
@@ -182,7 +168,7 @@ int main(int argc, char *argv[]) {
     char *chat_buffer = malloc(BUFLEN);
     pthread_t thread;
     ssize_t bytes;
-    char my_id, map_nr;
+    char my_id, map_nr, *ip, *port;
     char my_name[10];
     memset(my_name, 0, 10);
     struct termios save_term, conf_term;
@@ -300,7 +286,23 @@ int main(int argc, char *argv[]) {
                     exit_clean = 1;
                     break;
                 }
-                addr_ptr = serverListParser(buffer);
+                if(serverListParser(buffer) != 0) {
+		    printf("Error with serverListParser\n");
+		    exit_clean = 1;
+		    break;
+		}
+		ip = strtok(buffer, " ");
+		port = strtok(NULL, " ");
+		if(isIpv4(ip)) {
+		    sock_addr_in = ipv4_parser(ip, port);
+		    sock_len = sizeof(sock_addr_in);
+		    addr_ptr = (struct sockaddr *) &sock_addr_in;
+		}
+		else {
+		    sock_addr_in6 = ipv6_parser(ip, port);
+		    sock_len = sizeof(sock_addr_in6);
+		    addr_ptr = (struct sockaddr *) &sock_addr_in6;
+		}
             }
             else {
                 printf("Unexpected message from server: %s\n", buffer);

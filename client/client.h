@@ -10,8 +10,8 @@ int isIpv4(char *);
 
 //Parse list from from given buffer, that contains serverlist. 
 //Present that list to user and ask which server they want to connect.
-//Return type converted address structure that can be used with connect
-struct sockaddr *serverListParser(char *);
+//Copy server choosed by user to the start of argument buffer
+int serverListParser(char *);
 
 //Parse ip and port from character strings to a struct sockaddr_in.
 struct sockaddr_in ipv4_parser(char *, char *);
