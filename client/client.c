@@ -60,7 +60,7 @@ int serverListParser(char *buf) {
 
 //Read input character or chat message from terminal. If it's a chat message, store it in buffer.
 char getInput(char *buffer) {
-    char character;
+    char character, direction;
     char buf[40];
     struct termios term_settings, old_settings;
     character = getchar();
@@ -86,28 +86,49 @@ char getInput(char *buffer) {
         sprintf(buffer, "%s", buf);
         pthread_mutex_unlock(&mtx);
     }
+    else if(character == 'e') {
+        pthread_mutex_lock(&mtx);
+        printf("\nWhich direction do you want to shoot? (Hint: wasd)\n");
+	while(direction != 'a' && direction != 'w' && direction != 's' && direction != 'd') {
+	    direction = getchar();
+	}
+        pthread_mutex_unlock(&mtx);
+	character = 'e' + direction;
+    }
     return character;
 }
 
 //Process character read from terminal. Return a character string that is send to the server afterwads.
-char *processCommand(char id, char input, char *buf) {
+char *processCommand(char id, unsigned char input, char *buf) {
     Action a; 
     memset(buf, '\0', BUFLEN);
     switch(input) {
-        case 'w':
-            a = UP;
-            break;
-        case 's':
-            a = DOWN;
-            break;
-        case 'a':
-            a = LEFT;
-            break;
-        case 'd':
-            a = RIGHT;
-            break;
-        default:
-            return NULL;
+	case 'w':
+	    a = UP;
+	    break;
+	case 's':
+	    a = DOWN;
+	    break;
+	case 'a':
+	    a = LEFT;
+	    break;
+	case 'd':
+	    a = RIGHT;
+	    break;
+	case ('e' + 'w'):
+	    a = SHOOT_UP;
+	    break;
+	case ('e' + 's'):
+	    a = SHOOT_DOWN;
+	    break;
+	case ('e' + 'a'):
+	    a = SHOOT_LEFT;
+	    break;
+	case ('e' + 'd'):
+	    a = SHOOT_RIGHT;
+	    break;
+	default:
+	    return NULL;
     }
     sprintf(buf, "A%c", id);
     memcpy(buf+2, &a, 1);
@@ -301,7 +322,10 @@ int main(int argc, char *argv[]) {
         }
         else if(input_char == 'h') {
             pthread_mutex_lock(&mtx);
-            printf("HELP: Movement: \"wasd\" Quit: \"0\" or \"q\" Chat: \"c\"\n");
+            printf("HELP: Movement: 'wasd'\n");
+            printf("HELP: Shooting: First press 'e', then any of the directions: 'wasd'\n");
+            printf("HELP: Chatting: First press 'c', then type your message and press enter \n");
+            printf("HELP: Quit: '0' or 'q'\n");
             printf("Press any key to continue\n");
             getchar();
             pthread_mutex_unlock(&mtx);

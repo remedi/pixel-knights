@@ -16,6 +16,6 @@ int serverListParser(char *);
 char getInput(char *);
 
 // Handle received character
-char *processCommand(char, char, char *);
+char *processCommand(char, unsigned char, char *);
 
 #endif

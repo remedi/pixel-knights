@@ -90,15 +90,10 @@ void *updateMap(void *ctx) {
             continue;
         }
         else if (buf[0] == 'C') {
-            printf("thread: Got C message: %s\n", buf+1);
             new_message(buf+1, message_array, message_count);
             continue;
         }
         else if (buf[0] == 'G') {
-            if ((bytes - 2) % 4 != 0) {
-                printf("thread: Faulty G message length: %zu\n", bytes);
-                continue;
-            }
             player_count = (uint8_t*) buf+G_OFFSET_C;
             x = (uint8_t*) buf+G_OFFSET_C+2;
             y = (uint8_t*) buf+G_OFFSET_C+3;
