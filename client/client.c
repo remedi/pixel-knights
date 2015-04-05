@@ -23,6 +23,9 @@
 #define BUFLEN 1000
 #define MSGLEN 40
 
+//Global variable for exiting:
+int exit_clean = 0;
+
 //Mutex for preventing map updates when player is writing a chat message or reading help
 pthread_mutex_t mtx = PTHREAD_MUTEX_INITIALIZER;
 
@@ -135,6 +138,32 @@ char *processCommand(char id, unsigned char input, char *buf) {
     return buf;
 }
 
+void clean_up() {
+    printf("Signal catched, setting a clean exit\n");
+    exit_clean = 1;
+}
+
+int changeTermSettings(struct termios new_settings) {
+    //Set new settings
+    struct termios actual_settings;
+    if(tcsetattr(STDIN_FILENO, TCSANOW, &new_settings) == -1) {
+	return -1;
+    }
+    //Check that mode actually changed
+    memset(&actual_settings, 0, sizeof(struct termios));
+    if(tcgetattr(STDIN_FILENO, &actual_settings) == -1) {
+        return -1;
+    }
+    else {
+        if(new_settings.c_lflag != actual_settings.c_lflag) {
+	    return -1;
+        }
+        else {
+            return 0;
+        }
+    }
+}
+
 int main(int argc, char *argv[]) {
     char input_char = 1;
     struct sockaddr_in sock_addr_in;
@@ -149,10 +178,16 @@ int main(int argc, char *argv[]) {
     memset(my_name, 0, 10);
     struct termios save_term, conf_term;
     int sock = 0;
-    int exit_clean = 0;
     int IP4;
     int domain;
     socklen_t sock_len;
+    struct sigaction sig_hand;
+
+    // Signal handler
+    sig_hand.sa_handler = clean_up;
+    sigemptyset(&sig_hand.sa_mask);
+    sig_hand.sa_flags = 0;
+    sigaction(SIGINT, &sig_hand, NULL);
 
     if (argc != 3 && argc != 2) {
         printf("Usage: client <ipv4> <port>\n");
@@ -192,29 +227,18 @@ int main(int argc, char *argv[]) {
     //Get terminal settings
     if(tcgetattr(STDIN_FILENO, &save_term) == -1) {
         perror("tcgetattr");
+	exit_clean = 1;
     }
     conf_term = save_term;
     conf_term.c_lflag = (conf_term.c_lflag & ~ICANON);
     conf_term.c_lflag = (conf_term.c_lflag & ~ECHO);
-    conf_term.c_lflag = (conf_term.c_lflag & ~ECHONL);
-    //Set new settings
-    if(tcsetattr(STDIN_FILENO, TCSANOW, &conf_term) == -1) {
-        perror("main, tcsetattr");
+    //conf_term.c_lflag = (conf_term.c_lflag & ~ECHONL);
+
+    if (changeTermSettings(conf_term) == -1) {
+	perror("Error when changing terminal settings\n");
+	exit_clean = 1;
     }
-    //Check that mode actually changed
-    memset(&conf_term, 0, sizeof(conf_term));
-    if(tcgetattr(STDIN_FILENO, &conf_term) == -1) {
-        perror("main, tcgetattr");
-    }
-    else {
-        if((conf_term.c_lflag & (ICANON | ECHO | ECHONL)) == 0) {
-            //printf("main: Terminal settings succesfully changed\n");
-        }
-        else {
-            perror("main: Error with term setattr");
-            exit(EXIT_FAILURE);
-        }
-    }
+
 
     //Setup connection. There maybe multiple loops if we first connect to a MM server
     while(!exit_clean) {
@@ -286,14 +310,16 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    // Fill the thread context struct and start the thread for updating map
-    Context_client_thread ctx;
-    ctx.sock = &sock;
-    ctx.lock = &mtx;
-    ctx.map_nr = &map_nr;
-    ctx.main_exit = &exit_clean;
-    if(pthread_create(&thread, NULL, updateMap, &ctx) < 0) {
-        perror("main, pthread_create");
+    if(!exit_clean) {
+	// Fill the thread context struct and start the thread for updating map
+	Context_client_thread ctx;
+	ctx.sock = &sock;
+	ctx.lock = &mtx;
+	ctx.map_nr = &map_nr;
+	ctx.main_exit = &exit_clean;
+	if(pthread_create(&thread, NULL, updateMap, &ctx) < 0) {
+	    perror("main, pthread_create");
+	}
     }
 
     //This loop will constantly read user input
@@ -346,8 +372,6 @@ int main(int argc, char *argv[]) {
 
     //printf("\nmain: Commencing cleanup\n");
 
-    //Perform cleanup:
-    //printf("main: Waiting for map update thread to exit\n");
     if(pthread_join(thread, NULL) < 0) {
         perror("pthread_join");
     }
@@ -357,19 +381,10 @@ int main(int argc, char *argv[]) {
     free(chat_buffer);
 
     //Set back old settings
-    tcsetattr(STDIN_FILENO, TCSANOW, &save_term);
-    memset(&conf_term, 0, sizeof(conf_term));
-    if(tcgetattr(STDIN_FILENO, &conf_term) == -1) {
-        perror("tcgetattr");
-    }
-    if(conf_term.c_lflag == save_term.c_lflag) {
-        //printf("main: Old terminal settings succesfully restored\n");
-    }
-    else {
-        printf("main: Error restoring terminal settings. Old: %d New: %d\n", save_term.c_lflag, conf_term.c_lflag);
+    if(changeTermSettings(save_term) != 0) {
+        printf("Error when restoring terminal settings\nIf you have somekind problems typing try one of the following:\n1. Just restart your terminal\n2. Press Ctrl + J, then type \"stty sane\" and press Ctrl + J\n");
     }
 
-    //printf("main: Cleanup done, exiting\n");
     printf("Game over, goodbye!\n");
     exit(0);
 }
