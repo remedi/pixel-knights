@@ -6,6 +6,9 @@
 
 #include "../typedefs.h"
 
+//Generate random coordinates, that are not occupied by anything from the map
+int randomCoord(Gamestate *, Mapdata *, Coord *);
+
 // Returns the maximum of a and b
 int max(int, int);
 

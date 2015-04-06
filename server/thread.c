@@ -15,6 +15,12 @@
 #define MAXDATASIZE 128
 #define G_INTERVAL_USEC 100000
 
+//Bullets are moved according to this value, smaller the faster: 
+#define BULLET_INTERVAL 10
+
+//Trees are spawned according to this value, smaller the faster: 
+#define TREE_INTERVAL 10
+
 // Send game state to all connected clients periodically
 void* sendGamestate(void* ctx) {
 
@@ -37,10 +43,17 @@ void* sendGamestate(void* ctx) {
         // Lock the game state for reading
         pthread_mutex_lock(c->lock);
 
-	// Move bullets once every second so they can still be debugged.
+	// Move bullets every BULLET_INTERVAL 'th loop
 	i++;
-	if(i % 10 == 0) {
+	if(i % BULLET_INTERVAL == 0) {
 	    updateBullets(game, m);
+	}
+
+	// Spawn tree, but don't spawn if game is empty
+	if(i % TREE_INTERVAL == 0) {
+	    if(getPlayerCount(game)) {
+		spawnTree(game, m);
+	    }
 	}
 
 
@@ -67,7 +80,7 @@ void* sendGamestate(void* ctx) {
         g = game;
         while (g->next != NULL) {
 	    //Don't send to bullets etc
-	    if(g->next->sock == -1) {
+	    if(g->next->sock < 0) {
 		g = g->next;
 		continue;
 	    }

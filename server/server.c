@@ -16,6 +16,36 @@
 #include "server.h"
 #include "gamestate.h"
 
+//Generate random coordinates, that are not occupied by anything at the map
+int randomCoord(Gamestate *g, Mapdata *m, Coord *c) {
+
+    if(!g || !m) {
+	return -1;
+    }
+    //Dont check for game collision if gamestate is empty
+    int skip_game_col = 0;
+    if(g->next == NULL) {
+	skip_game_col = 1;
+    }
+
+    int height = m->height;
+    int width = m->width;
+    //Two types of collisions to be avoided: collision with a element in gamestate, or with wall in mapdata
+    int game_col = 0, map_col = 1;
+    Coord random;
+    while(game_col || map_col) {
+	random.x = rand() % width;
+	random.y = rand() % height;
+	map_col = checkWall(m, random);
+	if(!skip_game_col) {
+	    game_col = checkCollision(g, random);
+	}
+    }
+    c->x = random.x;
+    c->y = random.y;
+    return 0;
+}
+
 // Announce map server to matchmaking server
 int registerToMM(char *MM_IP, char *MM_port, char map_nr, struct sockaddr_in* my_IP, struct sockaddr_in6* my_IP6) {
     int sock;
@@ -121,8 +151,18 @@ int checkCollision(Gamestate* g, Coord c) {
 
     while(g) {
         if (g->c.x == c.x && g->c.y == c.y) {
-            // Collision happened!
-            return -3;
+	    //Collision with a bullet
+	    if(g->sock == -1) {
+		return -4;
+	    }
+	    //Collision with tree
+	    else if(g->sock == -2) {
+		return -5;
+	    }
+	    //Collision with player
+	    else {
+		return -3;
+	    }
         }
         g = g->next;
     }
@@ -150,7 +190,7 @@ int sendAnnounce(Gamestate* g, char* msg, size_t len, ID id) {
             g = g->next;
             continue;
         }
-	if(g->sock == -1) {
+	if(g->sock < 0) {
 	    g = g->next;
 	    continue;
 	}

@@ -68,7 +68,7 @@ int main(int argc, char *argv[]) {
     Coord c;
     Action a;
     uint8_t* data;
-    Mapdata mapdata;
+    Mapdata map;
 
     // Initialize hints struct for getaddrinfo
     memset(&hints, 0, sizeof(struct addrinfo));
@@ -90,7 +90,7 @@ int main(int argc, char *argv[]) {
         exit(EXIT_SUCCESS);
     }
     // Create map
-    if (createMap(&mapdata, map_nr) != 0) {
+    if (createMap(&map, map_nr) != 0) {
         fprintf(stderr, "Error creating map.\n");
         exit(EXIT_FAILURE);
     }
@@ -203,7 +203,7 @@ int main(int argc, char *argv[]) {
     pthread_mutex_init(&lock, NULL);
     Context_server_thread ctx;
     ctx.g = &game;
-    ctx.m = &mapdata;
+    ctx.m = &map;
     ctx.lock = &lock;
     if (pthread_create(&gamestate_thread, NULL, sendGamestate, &ctx) < 0) {
         perror("pthread_create error");
@@ -284,7 +284,7 @@ int main(int argc, char *argv[]) {
 
                         // Move player and lock game state
                         pthread_mutex_lock(&lock);
-                        status = movePlayer(&game, &mapdata, id, a);
+                        status = movePlayer(&game, &map, id, a);
                         pthread_mutex_unlock(&lock);
 
                         if (status == -1) {
@@ -317,24 +317,11 @@ int main(int argc, char *argv[]) {
                             continue;
 
                         id = createID();
-                        c.x = 1;
-                        c.y = 1;
-                        while (1) {
-                            // Check for player collisions in target coordinate
-                            pthread_mutex_lock(&lock);
-                            status = checkCollision(&game, c);
-                            pthread_mutex_unlock(&lock);
-                            // No collision or collision solved
-                            if (!status)
-                                break;
-                            if (status == -1)
-                                fprintf(stderr, "checkCollision %02x: Invalid game state\n", id);
-                            // Game is empty, create a player
-                            if (status == -2)
-                                break;
-                            else
-                                c.x++; c.y++;
-                        }
+
+			//Generate random coordinates to c:
+			pthread_mutex_lock(&lock);
+			randomCoord(&game, &map, &c);
+			pthread_mutex_unlock(&lock);
 
                         // Lock game state and add player
                         pthread_mutex_lock(&lock);
@@ -457,7 +444,7 @@ int main(int argc, char *argv[]) {
 			pthread_cancel(gamestate_thread);
 			pthread_join(gamestate_thread, NULL);
 			freePlayers(&game);
-			freeMap(&mapdata);
+			freeMap(&map);
 			free(sendbuf);
 			free(recvbuf);
                         printf("Exiting...\n");
@@ -470,7 +457,7 @@ int main(int argc, char *argv[]) {
     pthread_cancel(gamestate_thread);
     pthread_join(gamestate_thread, NULL);
     freePlayers(&game);
-    freeMap(&mapdata);
+    freeMap(&map);
     free(sendbuf);
     free(recvbuf);
     printf("Server exiting now\n");

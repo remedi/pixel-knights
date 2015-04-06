@@ -11,6 +11,34 @@
 #include "gamestate.h"
 #include "server.h" 
 
+
+//Spawn a new tree 'character' in a random place
+int spawnTree(Gamestate* g, Mapdata* m) {
+    Coord random;
+    int status;
+
+    status = getTreeCount(g);
+    if(status > 10) {
+        // Don't spawn a new tree if there is 'too many'. Return with no error
+	return 0;
+    }
+
+    //Generate random coordinates for tree
+    status = randomCoord(g, m, &random);
+    if(status) {
+	return status;
+    }
+
+    //Create new tree 'character'. Sock -2 means that it is tree
+    status = addPlayer(g, createID(), random, -2, 'T', 3);
+    if(status) {
+	return status;
+    }
+
+    return 0;
+}
+
+
 // Adds player to the gamestate linked-list
 int addPlayer(Gamestate* g, ID id, Coord c, int sock, char sign, char data) {
 
@@ -86,13 +114,31 @@ uint8_t getPlayerCount(Gamestate* g) {
 
     // Iterate all the elements
     while (g != NULL) {
-	if(g->sock != -1) 
+	if(g->sock > 0) 
 	    size++;
         g = g->next;
     }
     return size;
 }
 
+// Gets the amount of trees in Gamestate
+uint8_t getTreeCount(Gamestate* g) {
+
+    uint8_t size = 0;
+
+    // First element does not contain player
+    g = g->next;
+
+    // Iterate all the elements
+    while (g != NULL) {
+	if(g->sock == -2) 
+	    size++;
+        g = g->next;
+    }
+    return size;
+}
+
+// Add bullet 'character' next to a player
 int addBullet(Gamestate *g, Mapdata *map_data, ID id, Action a) {
     Coord temp_coord;
     Gamestate* game = g;

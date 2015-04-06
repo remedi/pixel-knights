@@ -6,23 +6,23 @@
 #include "../maps/maps.h"
 #include "../typedefs.h"
 
+/* Functions that add something to the list:*/
+
 // Adds player to the gamestate linked-list
 int addPlayer(Gamestate*, ID, Coord, int, char, char);
 
-// Finds pointer to the Gamestate struct containing ID
-Gamestate* findPlayer(Gamestate*, ID);
+// Add bullet next to a shooting player
+int addBullet(Gamestate*, Mapdata *, ID, Action);
 
-// Gets the amount of elements in Gamestate
-uint8_t getSize(Gamestate*);
+// Spawn tree to a random location
+int spawnTree(Gamestate*, Mapdata*);
 
-// Gets the amount of players in Gamestate
-uint8_t getPlayerCount(Gamestate*);
+
+
+/*Functions that some other way modify the list:*/
 
 // Moves player to the destination Coord
 int movePlayer(Gamestate*, Mapdata *, ID, Action);
-
-// Add bullet to the gamestate ll
-int addBullet(Gamestate*, Mapdata *, ID, Action);
 
 //Move each bullet once
 int updateBullets(Gamestate*, Mapdata*);
@@ -33,13 +33,29 @@ int changePlayerSign(Gamestate*, ID, char);
 // Removes player from the gamestate linked-list
 int removePlayer(Gamestate*, ID);
 
+// Terminates the Gamestate instance
+void freePlayers(Gamestate*);
+
+
+
+/* Functions that provide information about the list:*/
+
+// Finds pointer to the Gamestate struct containing ID
+Gamestate* findPlayer(Gamestate*, ID);
+
+// Gets the amount of elements in Gamestate
+uint8_t getSize(Gamestate*);
+
+// Gets the amount of players in Gamestate
+uint8_t getPlayerCount(Gamestate*);
+
+// Gets the amount of trees in Gamestate
+uint8_t getTreeCount(Gamestate*);
+
 // Produces string that contains all data about players
 int printPlayers(Gamestate*);
 
 // Parses the data that gets sent to the players
 int parseGamestate(Gamestate*, void*, int);
-
-// Terminates the Gamestate instance
-void freePlayers(Gamestate*);
 
 #endif
