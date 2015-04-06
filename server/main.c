@@ -25,6 +25,16 @@
 #define PORT "4375"
 #define BACKLOG 10
 
+
+//Global flag for exiting
+int exit_clean = 0;
+
+//Signal handler
+void clean_up() {
+    printf("System signal received, exiting cleanly\n");
+    exit_clean = 1;
+}
+
 int main(int argc, char *argv[]) {
 
     // Declare variables
@@ -41,7 +51,15 @@ int main(int argc, char *argv[]) {
     char ipstr[INET6_ADDRSTRLEN];
     ssize_t nbytes; 
     pthread_t gamestate_thread;
-    int IP4;
+    int IP4 = 1;
+    struct sigaction sig_handler;
+
+    // Signal handler
+    sig_handler.sa_handler = clean_up;
+    sigemptyset(&sig_handler.sa_mask);
+    sig_handler.sa_flags = 0;
+    sigaction(SIGINT, &sig_handler, NULL);
+    sigaction(SIGPIPE, &sig_handler, NULL);
 
     // Initialize game state
     Gamestate game;
@@ -192,7 +210,7 @@ int main(int argc, char *argv[]) {
         exit(EXIT_FAILURE);
     }
 
-    while(1) {
+    while(!exit_clean) {
 
         // Copy the master set to read set
         rdset = master;
@@ -200,7 +218,8 @@ int main(int argc, char *argv[]) {
         // Select the descriptors that are ready for reading
         if ((status = select(fdmax + 1, &rdset, NULL, NULL, NULL)) == -1) {
             perror("select error");
-            exit(EXIT_FAILURE);
+            exit_clean = 1;
+	    continue;
         }
 
         // If the listen socket is ready for reading; new connection has arrived
@@ -435,11 +454,12 @@ int main(int argc, char *argv[]) {
 
                     // Just to be able to remotely close the server...
                     else if (!strncmp(recvbuf, "KILL", 4)) {
-                        freePlayers(&game);
-                        pthread_cancel(gamestate_thread);
-                        pthread_join(gamestate_thread, NULL);
-                        free(sendbuf);
-                        free(recvbuf);
+			pthread_cancel(gamestate_thread);
+			pthread_join(gamestate_thread, NULL);
+			freePlayers(&game);
+			freeMap(&mapdata);
+			free(sendbuf);
+			free(recvbuf);
                         printf("Exiting...\n");
                         return 0;
                     }
@@ -447,4 +467,12 @@ int main(int argc, char *argv[]) {
             }
         }
     }
+    pthread_cancel(gamestate_thread);
+    pthread_join(gamestate_thread, NULL);
+    freePlayers(&game);
+    freeMap(&mapdata);
+    free(sendbuf);
+    free(recvbuf);
+    printf("Server exiting now\n");
+    return 0;
 }
