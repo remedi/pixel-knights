@@ -79,11 +79,11 @@ char getInput(char *buffer) {
         term_settings.c_lflag = (term_settings.c_lflag | ECHO);
         term_settings.c_lflag = (term_settings.c_lflag | ICANON);
         if(tcsetattr(STDIN_FILENO, TCSANOW, &term_settings) == -1) {
-            perror("main, tcsetattr");
+            perror("tcsetattr");
         }
         fgets(buf, 40, stdin);
         if(tcsetattr(STDIN_FILENO, TCSANOW, &old_settings) == -1) {
-            perror("main, tcsetattr");
+            perror("tcsetattr");
         }
         //Remove last newline:
         sprintf(buffer, "%s", buf);
@@ -173,7 +173,7 @@ int main(int argc, char *argv[]) {
     char *chat_buffer = malloc(BUFLEN);
     pthread_t thread;
     ssize_t bytes;
-    char my_id, map_nr, *ip, *port;
+    char my_id, map_nr = 1, *ip, *port;
     char my_name[10];
     memset(my_name, 0, 10);
     struct termios save_term, conf_term;
@@ -191,6 +191,8 @@ int main(int argc, char *argv[]) {
 
     if (argc != 3 && argc != 2) {
         printf("Usage: client <ipv4> <port>\n");
+	free(buffer);
+	free(chat_buffer);
         exit(EXIT_FAILURE);
     }
     if (argc == 3) {
@@ -219,7 +221,8 @@ int main(int argc, char *argv[]) {
         printf("Enter name: ");
         if (fgets(my_name, 10, stdin) == NULL) {
             perror("fgets");
-            exit(EXIT_FAILURE);
+            exit_clean = 1;
+	    break;
         }
         my_name[strlen(my_name)-1] = '\0';
     }
@@ -310,16 +313,14 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    if(!exit_clean) {
-	// Fill the thread context struct and start the thread for updating map
-	Context_client_thread ctx;
-	ctx.sock = &sock;
-	ctx.lock = &mtx;
-	ctx.map_nr = &map_nr;
-	ctx.main_exit = &exit_clean;
-	if(pthread_create(&thread, NULL, updateMap, &ctx) < 0) {
-	    perror("main, pthread_create");
-	}
+    // Fill the thread context struct and start the thread for updating map
+    Context_client_thread ctx;
+    ctx.sock = &sock;
+    ctx.lock = &mtx;
+    ctx.map_nr = &map_nr;
+    ctx.main_exit = &exit_clean;
+    if(pthread_create(&thread, NULL, updateMap, &ctx) < 0) {
+	perror("main, pthread_create");
     }
 
     //This loop will constantly read user input
@@ -369,8 +370,6 @@ int main(int argc, char *argv[]) {
         if (exit_clean)
             break;
     }
-
-    //printf("\nmain: Commencing cleanup\n");
 
     if(pthread_join(thread, NULL) < 0) {
         perror("pthread_join");
