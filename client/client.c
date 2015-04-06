@@ -139,7 +139,7 @@ char *processCommand(char id, unsigned char input, char *buf) {
 }
 
 void clean_up() {
-    printf("Signal catched, setting a clean exit\n");
+    printf("System signal received, commencing a clean exit\n");
     exit_clean = 1;
 }
 
@@ -177,9 +177,7 @@ int main(int argc, char *argv[]) {
     char my_name[10];
     memset(my_name, 0, 10);
     struct termios save_term, conf_term;
-    int sock = 0;
-    int IP4;
-    int domain;
+    int sock = 0, IP4 = 1, domain, exit_msg_needed = 0;
     socklen_t sock_len;
     struct sigaction sig_hand;
 
@@ -188,6 +186,7 @@ int main(int argc, char *argv[]) {
     sigemptyset(&sig_hand.sa_mask);
     sig_hand.sa_flags = 0;
     sigaction(SIGINT, &sig_hand, NULL);
+    sigaction(SIGPIPE, &sig_hand, NULL);
 
     if (argc != 3 && argc != 2) {
         printf("Usage: client <ipv4> <port>\n");
@@ -277,6 +276,8 @@ int main(int argc, char *argv[]) {
                 printf("main: ID message: ID: %d Map nr: %d\n", buffer[1], buffer[2]);
                 my_id = buffer[1];
                 map_nr = buffer[2];
+		//Since we're connected to a map server, we need to send 'Q<ID>' when we exit the game
+   	        exit_msg_needed = 1;
                 break;
             }
             else if(buffer[0] == 'L') {
@@ -345,6 +346,7 @@ int main(int argc, char *argv[]) {
             memcpy(buffer+1, &my_id, 1);
             write(sock, buffer, 2);
             exit_clean = 1;
+	    exit_msg_needed = 0;
             break;
         }
         else if(input_char == 'h') {
@@ -369,6 +371,13 @@ int main(int argc, char *argv[]) {
         // Thread can also set this flag when completed
         if (exit_clean)
             break;
+    }
+    
+    //Clean-up:
+    if(exit_msg_needed) {
+	buffer[0] = 'Q';
+	memcpy(buffer+1, &my_id, 1);
+	write(sock, buffer, 2);
     }
 
     if(pthread_join(thread, NULL) < 0) {
