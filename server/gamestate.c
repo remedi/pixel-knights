@@ -94,7 +94,7 @@ uint8_t getPlayerCount(Gamestate* g) {
     return size;
 }
 
-// Gets the amount of trees in Gamestate
+// Gets the amount of score points in Gamestate
 uint8_t getScorePointCount(Gamestate* g) {
 
     uint8_t size = 0;
@@ -109,175 +109,6 @@ uint8_t getScorePointCount(Gamestate* g) {
         g = g->next;
     }
     return size;
-}
-
-// Add bullet 'character' next to a player
-int addBullet(Gamestate *g, Mapdata *map_data, ID id, Action a) {
-    Coord temp_coord;
-    Gamestate* game = g;
-
-    // If gamestate NULL
-    if (!g)
-        return -1;
-
-    // Iterate the linked-list
-    if (!(g = findObject(g, id)))
-        return -2;
-
-    temp_coord = g->c;
-
-    switch(a) {
-        case SHOOT_RIGHT:
-            temp_coord.x++;
-            if (!checkWall(map_data, temp_coord)) {
-                if (!checkCollision(game, temp_coord)) {
-                    if(addObject(game, createID(g), temp_coord, RIGHT, '*', BULLET) != 0) {
-                        return -5;
-                    }
-                    break;
-                }
-            }
-            return -3;
-
-        case SHOOT_LEFT:
-            temp_coord.x--;
-            if (!checkWall(map_data, temp_coord)) {
-                if (!checkCollision(game, temp_coord)) {
-                    if(addObject(game, createID(g), temp_coord, LEFT, '*', BULLET) != 0) {
-                        return -5;
-                    }
-                    break;
-                }
-            }
-            return -3;
-
-        case SHOOT_UP:
-            temp_coord.y--;
-            if (!checkWall(map_data, temp_coord)) {
-                if (!checkCollision(game, temp_coord)) {
-                    if(addObject(game, createID(g), temp_coord, UP, '*', BULLET) != 0) {
-                        return -5;
-                    }
-                    break;
-                }
-            }
-            return -3;
-
-        case SHOOT_DOWN:
-            temp_coord.y++;
-            if (!checkWall(map_data, temp_coord)) {
-                if (!checkCollision(game, temp_coord)) {
-                    if(addObject(game, createID(g), temp_coord, DOWN, '*', BULLET) != 0) {
-                        return -5;
-                    }
-                    break;
-                }
-            }
-            return -3;
-
-        default:
-            return -4;
-    }
-    return 0;
-}
-
-// Move every bullet once to direction that bullet is heading.
-// This direction is determined by the Action enum in the bullets data field
-int updateBullets(Gamestate* g, Mapdata *map_data) {
-
-    Gamestate* game = g;
-
-    // If gamestate NULL
-    if (!g)
-        return -1;
-
-    while(g != NULL) {
-        if(g->type == BULLET) {
-            //Bullets move as normal players
-            if(movePlayer(game, map_data, g->id, g->data) == -3) {
-                //If bullet collides with anything, remove it
-                removeObject(game, g->id);
-            }
-        }
-        g = g->next;
-    }
-    return 0;
-}
-
-// This function performs the action that player has requested: Move player or shoot a bullet.
-int movePlayer(Gamestate* g, Mapdata *map_data, ID id, Action a) {
-
-    Coord temp_coord;
-    Gamestate* game = g;
-
-    // If gamestate NULL
-    if (!g)
-        return -1;
-
-    // Iterate the linked-list
-    if (!(g = findObject(g, id)))
-        return -2;
-
-    temp_coord = g->c;
-
-    // Update coordinates
-    switch(a) {
-        case UP:
-            temp_coord.y--;
-            if (!checkWall(map_data, temp_coord)) {
-                if (!checkCollision(game, temp_coord)) {
-                    g->c.y--;
-                    break;
-                }
-            }
-            return -3;
-
-        case DOWN:
-            temp_coord.y++;
-            if (!checkWall(map_data, temp_coord)) {
-                if (!checkCollision(game, temp_coord)) {
-                    g->c.y++;
-                    break;
-                }
-            }
-            return -3;
-
-        case LEFT:
-            temp_coord.x--;
-            if (!checkWall(map_data, temp_coord)) {
-                if (!checkCollision(game, temp_coord)) {
-                    g->c.x--;
-                    break;
-                }
-            }
-            return -3;
-
-        case RIGHT:
-            temp_coord.x++;
-            if (!checkWall(map_data, temp_coord)) {
-                if (!checkCollision(game, temp_coord)) {
-                    g->c.x++;
-                    break;
-                }
-            }
-            return -3;
-
-        case SHOOT_RIGHT:
-            return addBullet(game, map_data, id, a);
-
-        case SHOOT_LEFT:
-            return addBullet(game, map_data, id, a);
-
-        case SHOOT_DOWN:
-            return addBullet(game, map_data, id, a);
-
-        case SHOOT_UP:
-            return addBullet(game, map_data, id, a);
-
-        default:
-            return -4;
-    }
-    return 0;
 }
 
 // Changes the sign of the player
@@ -298,11 +129,11 @@ int changePlayerSign(Gamestate* g, ID id, char sign) {
 }
 
 // Removes the player from the gamestate linked-list
-int removeObject(Gamestate* g, ID id) {
+Gamestate* removeObject(Gamestate* g, ID id) {
 
     // If gamestate NULL
     if (!g)
-        return -1;
+        return NULL;
 
     while (g->next != NULL) {
         // ID found
@@ -310,13 +141,13 @@ int removeObject(Gamestate* g, ID id) {
             Gamestate* tmp = g->next->next;
             free(g->next);
             g->next = tmp;
-            return 0;
+            return g;
         }
         g = g->next;
     }
 
     // Not found
-    return -2;
+    return NULL;
 }
 
 // Print for debugging purposes

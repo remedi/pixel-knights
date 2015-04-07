@@ -6,6 +6,12 @@
 
 #include "../typedefs.h"
 
+// Processes the Action received from the client
+int processAction(Gamestate*, Mapdata *, ID, Action);
+
+//Move each bullet once
+int updateBullets(Gamestate*, Mapdata*);
+
 // Spawn tree to a random location
 int spawnScorePoint(Gamestate*, Mapdata*);
 

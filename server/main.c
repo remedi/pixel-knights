@@ -284,7 +284,7 @@ int main(int argc, char *argv[]) {
 
                         // Move player and lock game state
                         pthread_mutex_lock(&lock);
-                        status = movePlayer(&game, &map, id, a);
+                        status = processAction(&game, &map, id, a);
                         pthread_mutex_unlock(&lock);
 
                         if (status == -1) {
@@ -388,19 +388,13 @@ int main(int argc, char *argv[]) {
 
                         // Remove player and lock game state
                         pthread_mutex_lock(&lock);
-                        status = removeObject(&game, id);
-                        pthread_mutex_unlock(&lock);
-
-                        if (status == -1) {
-                            fprintf(stderr, "removeObject %02x: Invalid game state\n", id);
-                            continue;
-                        }
-                        else if (status == -2) {
+                        if (!removeObject(&game, id)) {
                             fprintf(stderr, "removeObject %02x: ID not found\n", id);
                             continue;
                         }
                         else
-                            printf("Player with id: %02x disconnected!\n", id);
+                            printf("Player with id: %02x disconnected!\n", id); 
+                        pthread_mutex_unlock(&lock);
 
                         // Send disconnect announcement
                         status = sendAnnounce(&game, "CPlayer disconnected!", 21, 0); 

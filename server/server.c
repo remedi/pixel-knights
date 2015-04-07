@@ -16,6 +16,131 @@
 #include "server.h"
 #include "gamestate.h"
 
+// This function performs the action that player has requested: Move player or shoot a bullet.
+int processAction(Gamestate* g, Mapdata *map_data, ID id, Action a) {
+    Coord temp_coord;
+    Gamestate* game = g;
+
+    // If gamestate NULL
+    if (!g)
+        return -1;
+
+    // Iterate the linked-list
+    if (!(g = findObject(g, id)))
+        return -2;
+
+    temp_coord = g->c;
+
+    switch(a) {
+        case UP:
+            temp_coord.y--;
+            if (!checkWall(map_data, temp_coord)) {
+                if (!checkCollision(game, temp_coord)) {
+                    g->c.y--;
+                    break;
+                }
+            }
+            return -3;
+
+        case DOWN:
+            temp_coord.y++;
+            if (!checkWall(map_data, temp_coord)) {
+                if (!checkCollision(game, temp_coord)) {
+                    g->c.y++;
+                    break;
+                }
+            }
+            return -3;
+
+        case LEFT:
+            temp_coord.x--;
+            if (!checkWall(map_data, temp_coord)) {
+                if (!checkCollision(game, temp_coord)) {
+                    g->c.x--;
+                    break;
+                }
+            }
+            return -3;
+
+        case RIGHT:
+            temp_coord.x++;
+            if (!checkWall(map_data, temp_coord)) {
+                if (!checkCollision(game, temp_coord)) {
+                    g->c.x++;
+                    break;
+                }
+            }
+            return -3;
+
+        case SHOOT_RIGHT:
+            temp_coord.x++;
+            if (!checkWall(map_data, temp_coord)) {
+                if (!checkCollision(game, temp_coord)) {
+                    if(!addObject(game, createID(g), temp_coord, RIGHT, '*', BULLET))
+                        break;
+                }
+            }
+            return -5;
+
+        case SHOOT_LEFT:
+            temp_coord.x--;
+            if (!checkWall(map_data, temp_coord)) {
+                if (!checkCollision(game, temp_coord)) {
+                    if(!addObject(game, createID(g), temp_coord, LEFT, '*', BULLET))
+                        break;
+                }
+            }
+            return -5;
+
+        case SHOOT_UP:
+            temp_coord.y--;
+            if (!checkWall(map_data, temp_coord)) {
+                if (!checkCollision(game, temp_coord)) {
+                    if(addObject(game, createID(g), temp_coord, UP, '*', BULLET) != 0)
+                        break;
+                }
+            }
+            return -5;
+
+        case SHOOT_DOWN:
+            temp_coord.y++;
+            if (!checkWall(map_data, temp_coord)) {
+                if (!checkCollision(game, temp_coord)) {
+                    if(addObject(game, createID(g), temp_coord, DOWN, '*', BULLET) != 0)
+                        break;
+                }
+            }
+            return -5;
+
+        default:
+            return -4;
+    }
+    return 0;
+}
+
+// Move every bullet once to direction that bullet is heading.
+// This direction is determined by the Action enum in the bullet's data field
+int updateBullets(Gamestate* g, Mapdata *map_data) {
+
+    Gamestate* game = g;
+
+    // If gamestate NULL
+    if (!g)
+        return -1;
+
+    while (g != NULL) {
+        if (g->type == BULLET) {
+            // Bullets move as normal players
+            if (processAction(game, map_data, g->id, g->data) == -3) {
+                // If bullet collides with anything, remove it
+                g = removeObject(game, g->id);
+            }
+        }
+        g = g->next;
+    }
+    return 0;
+}
+
 // Spawns a new score point to the game in random place
 int spawnScorePoint(Gamestate* g, Mapdata* m) {
     Coord random;

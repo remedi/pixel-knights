@@ -6,33 +6,19 @@
 #include "../maps/maps.h"
 #include "../typedefs.h"
 
-/* Functions that add something to the list:*/
+/* Functions that add to or modify the list:*/
 
 // Adds player to the gamestate linked-list
 int addObject(Gamestate*, ID, Coord, int, char, Type);
-
-// Add bullet next to a shooting player
-int addBullet(Gamestate*, Mapdata *, ID, Action);
-
-
-
-/*Functions that modify the list:*/
-
-// Moves player to the destination Coord
-int movePlayer(Gamestate*, Mapdata *, ID, Action);
-
-//Move each bullet once
-int updateBullets(Gamestate*, Mapdata*);
 
 // Changes the sign of the player
 int changePlayerSign(Gamestate*, ID, char);
 
 // Removes player from the gamestate linked-list
-int removeObject(Gamestate*, ID);
+Gamestate* removeObject(Gamestate*, ID);
 
 // Terminates the Gamestate instance
 void freeGamestate(Gamestate*);
-
 
 
 /* Functions that provide information about the list:*/
