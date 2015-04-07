@@ -6,6 +6,15 @@
 
 #include "../typedefs.h"
 
+// Processes the Action received from the client
+int processAction(Gamestate*, Mapdata *, ID, Action);
+
+//Move each bullet once
+int updateBullets(Gamestate*, Mapdata*);
+
+// Spawn tree to a random location
+int spawnScorePoint(Gamestate*, Mapdata*);
+
 //Generate random coordinates, that are not occupied by anything from the map
 int randomCoord(Gamestate *, Mapdata *, Coord *);
 
@@ -16,7 +25,7 @@ int max(int, int);
 ID createID(Gamestate*);
 
 // Check that the coordinate is valid 
-int checkCollision(Gamestate*, Coord);
+ID checkCollision(Gamestate*, Coord);
 
 // Sends announcement to all players except ID
 int sendAnnounce(Gamestate*, char*, size_t, ID);

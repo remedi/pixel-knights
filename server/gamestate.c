@@ -12,42 +12,15 @@
 #include "server.h" 
 
 
-//Spawn a new tree 'character' in a random place
-int spawnTree(Gamestate* g, Mapdata* m) {
-    Coord random;
-    int status;
-
-    status = getTreeCount(g);
-    if(status > 10) {
-        // Don't spawn a new tree if there is 'too many'. Return with no error
-        return 0;
-    }
-
-    //Generate random coordinates for tree
-    status = randomCoord(g, m, &random);
-    if(status) {
-        return status;
-    }
-
-    //Create new tree 'character'. Sock -2 means that it is tree
-    status = addPlayer(g, createID(g), random, -2, '$', 3);
-    if(status) {
-        return status;
-    }
-
-    return 0;
-}
-
-
-// Adds player to the gamestate linked-list
-int addPlayer(Gamestate* g, ID id, Coord c, int sock, char sign, char data) {
+// Adds object to the gamestate linked-list
+int addObject(Gamestate* g, ID id, Coord c, int data, char sign, Type t) {
 
     // If gamestate NULL
     if (!g)
         return -1;
 
     // If ID is already in the game
-    if (findPlayer(g, id))
+    if (findObject(g, id))
         return -2;
 
     // Find the last element of linked list
@@ -55,26 +28,26 @@ int addPlayer(Gamestate* g, ID id, Coord c, int sock, char sign, char data) {
         g = g->next;
 
     // Allocate memory for player and assign values
-    Gamestate* player = malloc(sizeof(Gamestate));
-    player->id = id;
-    player->c = c;
-    player->sign = sign;
-    player->sock = sock;
-    player->data = data;
-    player->next = NULL;
-    g->next = player;
+    Gamestate* object = malloc(sizeof(Gamestate));
+    object->id = id;
+    object->c = c;
+    object->sign = sign;
+    object->data = data;
+    object->type = t;
+    object->next = NULL;
+    g->next = object;
 
     return 0;
 }
 
 // Finds pointer to the Gamestate struct containing ID
-Gamestate* findPlayer(Gamestate* g, ID id) {
+Gamestate* findObject(Gamestate* g, ID id) {
 
     // If gamestate NULL
     if (!g)
         return NULL;
 
-    // Find the right player
+    // Find the right object
     while (g->next != NULL) {
         if (g->id == id)
             break;
@@ -93,7 +66,7 @@ uint8_t getSize(Gamestate* g) {
 
     uint8_t size = 0;
 
-    // First element does not contain player
+    // First element does not contain object
     g = g->next;
 
     // Iterate all the elements
@@ -114,197 +87,28 @@ uint8_t getPlayerCount(Gamestate* g) {
 
     // Iterate all the elements
     while (g != NULL) {
-        if(g->sock > 0) 
+        if (g->type == PLAYER) 
             size++;
         g = g->next;
     }
     return size;
 }
 
-// Gets the amount of trees in Gamestate
-uint8_t getTreeCount(Gamestate* g) {
+// Gets the amount of score points in Gamestate
+uint8_t getScorePointCount(Gamestate* g) {
 
     uint8_t size = 0;
 
-    // First element does not contain player
+    // First element does not contain object
     g = g->next;
 
     // Iterate all the elements
     while (g != NULL) {
-        if(g->sock == -2) 
+        if (g->type == POINT) 
             size++;
         g = g->next;
     }
     return size;
-}
-
-// Add bullet 'character' next to a player
-int addBullet(Gamestate *g, Mapdata *map_data, ID id, Action a) {
-    Coord temp_coord;
-    Gamestate* game = g;
-
-    // If gamestate NULL
-    if (!g)
-        return -1;
-
-    // Iterate the linked-list
-    if (!(g = findPlayer(g, id)))
-        return -2;
-
-    temp_coord = g->c;
-
-    switch(a) {
-        case SHOOT_RIGHT:
-            temp_coord.x++;
-            if (!checkWall(map_data, temp_coord)) {
-                if (!checkCollision(game, temp_coord)) {
-                    if(addPlayer(game, createID(g), temp_coord, -1, '*', RIGHT) != 0) {
-                        return -5;
-                    }
-                    break;
-                }
-            }
-            return -3;
-
-        case SHOOT_LEFT:
-            temp_coord.x--;
-            if (!checkWall(map_data, temp_coord)) {
-                if (!checkCollision(game, temp_coord)) {
-                    if(addPlayer(game, createID(g), temp_coord, -1, '*', LEFT) != 0) {
-                        return -5;
-                    }
-                    break;
-                }
-            }
-            return -3;
-
-        case SHOOT_UP:
-            temp_coord.y--;
-            if (!checkWall(map_data, temp_coord)) {
-                if (!checkCollision(game, temp_coord)) {
-                    if(addPlayer(game, createID(g), temp_coord, -1, '*', UP) != 0) {
-                        return -5;
-                    }
-                    break;
-                }
-            }
-            return -3;
-
-        case SHOOT_DOWN:
-            temp_coord.y++;
-            if (!checkWall(map_data, temp_coord)) {
-                if (!checkCollision(game, temp_coord)) {
-                    if(addPlayer(game, createID(g), temp_coord, -1, '*', DOWN) != 0) {
-                        return -5;
-                    }
-                    break;
-                }
-            }
-            return -3;
-
-        default:
-            return -4;
-    }
-    return 0;
-}
-
-// Move every bullet once to direction that bullet is heading.
-// This direction is determined by the Action enum in the bullets data field
-int updateBullets(Gamestate* g, Mapdata *map_data) {
-
-    Gamestate* game = g;
-
-    // If gamestate NULL
-    if (!g)
-        return -1;
-
-    while(g != NULL) {
-        if(g->sock == -1) {
-            //Bullets move as normal players
-            if(movePlayer(game, map_data, g->id, g->data) == -3) {
-                //If bullet collides with anything, remove it
-                removePlayer(game, g->id);
-            }
-        }
-        g = g->next;
-    }
-    return 0;
-}
-
-// This function performs the action that player has requested: Move player or shoot a bullet.
-int movePlayer(Gamestate* g, Mapdata *map_data, ID id, Action a) {
-
-    Coord temp_coord;
-    Gamestate* game = g;
-
-    // If gamestate NULL
-    if (!g)
-        return -1;
-
-    // Iterate the linked-list
-    if (!(g = findPlayer(g, id)))
-        return -2;
-
-    temp_coord = g->c;
-
-    // Update coordinates
-    switch(a) {
-        case UP:
-            temp_coord.y--;
-            if (!checkWall(map_data, temp_coord)) {
-                if (!checkCollision(game, temp_coord)) {
-                    g->c.y--;
-                    break;
-                }
-            }
-            return -3;
-
-        case DOWN:
-            temp_coord.y++;
-            if (!checkWall(map_data, temp_coord)) {
-                if (!checkCollision(game, temp_coord)) {
-                    g->c.y++;
-                    break;
-                }
-            }
-            return -3;
-
-        case LEFT:
-            temp_coord.x--;
-            if (!checkWall(map_data, temp_coord)) {
-                if (!checkCollision(game, temp_coord)) {
-                    g->c.x--;
-                    break;
-                }
-            }
-            return -3;
-
-        case RIGHT:
-            temp_coord.x++;
-            if (!checkWall(map_data, temp_coord)) {
-                if (!checkCollision(game, temp_coord)) {
-                    g->c.x++;
-                    break;
-                }
-            }
-            return -3;
-
-        case SHOOT_RIGHT:
-            return addBullet(game, map_data, id, a);
-
-        case SHOOT_LEFT:
-            return addBullet(game, map_data, id, a);
-
-        case SHOOT_DOWN:
-            return addBullet(game, map_data, id, a);
-
-        case SHOOT_UP:
-            return addBullet(game, map_data, id, a);
-
-        default:
-            return -4;
-    }
-    return 0;
 }
 
 // Changes the sign of the player
@@ -315,7 +119,7 @@ int changePlayerSign(Gamestate* g, ID id, char sign) {
         return -1;
 
     // Iterate the linked-list
-    if (!(g = findPlayer(g, id)))
+    if (!(g = findObject(g, id)))
         return -2;
 
     // Update sign
@@ -325,11 +129,11 @@ int changePlayerSign(Gamestate* g, ID id, char sign) {
 }
 
 // Removes the player from the gamestate linked-list
-int removePlayer(Gamestate* g, ID id) {
+Gamestate* removeObject(Gamestate* g, ID id) {
 
     // If gamestate NULL
     if (!g)
-        return -1;
+        return NULL;
 
     while (g->next != NULL) {
         // ID found
@@ -337,17 +141,17 @@ int removePlayer(Gamestate* g, ID id) {
             Gamestate* tmp = g->next->next;
             free(g->next);
             g->next = tmp;
-            return 0;
+            return g;
         }
         g = g->next;
     }
 
     // Not found
-    return -2;
+    return NULL;
 }
 
 // Print for debugging purposes
-int printPlayers(Gamestate* g) {
+int printObjects(Gamestate* g) {
 
     // If gamestate NULL
     if (!g)
@@ -357,11 +161,11 @@ int printPlayers(Gamestate* g) {
     if (g->next == NULL)
         return -2;
 
-    // First element does not contain player
+    // First element does not contain object
     g = g->next;
-    printf("Current players:\n");
+    printf("Current objects:\n");
     while (g != NULL) {
-        printf("%02x: (%hhu,%hhu) - %c @ %d\n", g->id, g->c.x, g->c.y, g->sign, g->sock);
+        printf("%02x: (%hhu,%hhu) - %c @ %d\n", g->id, g->c.x, g->c.y, g->sign, g->data);
         g = g->next;
     }
     printf("\n");
@@ -390,7 +194,7 @@ int parseGamestate(Gamestate* g, void* s, int len) {
     data[0] = 0x47; // ASCII G
     data[1] = getSize(g);
 
-    // First element does not contain player
+    // First element does not contain object
     g = g->next;
 
     while (g != NULL) {
@@ -411,13 +215,13 @@ int parseGamestate(Gamestate* g, void* s, int len) {
 }
 
 // Terminates the Gamestate instance
-void freePlayers(Gamestate* g) {
+void freeGamestate(Gamestate* g) {
 
     // If gamestate NULL
     if (!g)
         return;
 
-    // First element does not contain player
+    // First element does not contain object
     g = g->next;
 
     // Free all memory

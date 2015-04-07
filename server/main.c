@@ -284,7 +284,7 @@ int main(int argc, char *argv[]) {
 
                         // Move player and lock game state
                         pthread_mutex_lock(&lock);
-                        status = movePlayer(&game, &map, id, a);
+                        status = processAction(&game, &map, id, a);
                         pthread_mutex_unlock(&lock);
 
                         if (status == -1) {
@@ -321,7 +321,7 @@ int main(int argc, char *argv[]) {
                         // Generate random coordinates to c and add player
                         pthread_mutex_lock(&lock);
                         randomCoord(&game, &map, &c);
-                        status = addPlayer(&game, id, c, i, recvbuf[1], 0);
+                        status = addObject(&game, id, c, i, recvbuf[1], PLAYER);
                         pthread_mutex_unlock(&lock);
 
                         if (status == -1) {
@@ -388,19 +388,13 @@ int main(int argc, char *argv[]) {
 
                         // Remove player and lock game state
                         pthread_mutex_lock(&lock);
-                        status = removePlayer(&game, id);
-                        pthread_mutex_unlock(&lock);
-
-                        if (status == -1) {
-                            fprintf(stderr, "removePlayer %02x: Invalid game state\n", id);
-                            continue;
-                        }
-                        else if (status == -2) {
-                            fprintf(stderr, "removePlayer %02x: ID not found\n", id);
+                        if (!removeObject(&game, id)) {
+                            fprintf(stderr, "removeObject %02x: ID not found\n", id);
                             continue;
                         }
                         else
-                            printf("Player with id: %02x disconnected!\n", id);
+                            printf("Player with id: %02x disconnected!\n", id); 
+                        pthread_mutex_unlock(&lock);
 
                         // Send disconnect announcement
                         status = sendAnnounce(&game, "CPlayer disconnected!", 21, 0); 
@@ -437,14 +431,8 @@ int main(int argc, char *argv[]) {
 
                     // Just to be able to remotely close the server...
                     else if (!strncmp(recvbuf, "KILL", 4)) {
-                        pthread_cancel(gamestate_thread);
-                        pthread_join(gamestate_thread, NULL);
-                        freePlayers(&game);
-                        freeMap(&map);
-                        free(sendbuf);
-                        free(recvbuf);
-                        printf("Exiting...\n");
-                        return 0;
+                        exit_clean = 1;
+                        break;
                     }
                 }
             }
@@ -452,7 +440,7 @@ int main(int argc, char *argv[]) {
     }
     pthread_cancel(gamestate_thread);
     pthread_join(gamestate_thread, NULL);
-    freePlayers(&game);
+    freeGamestate(&game);
     freeMap(&map);
     free(sendbuf);
     free(recvbuf);
