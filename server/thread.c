@@ -43,18 +43,6 @@ void* sendGamestate(void* ctx) {
         // Lock the game state for reading
         pthread_mutex_lock(c->lock);
 
-        // Move bullets every BULLET_INTERVAL 'th loop
-        if(++i % BULLET_INTERVAL == 0) {
-            updateBullets(game, m);
-        }
-
-        // Spawn tree, but don't spawn if game is empty
-        if(i % TREE_INTERVAL == 0) {
-            if(getPlayerCount(game)) {
-                spawnTree(game, m);
-            }
-        }
-
         // Parse game state message
         status = parseGamestate(game, sendbuf, MAXDATASIZE);
 
@@ -77,15 +65,25 @@ void* sendGamestate(void* ctx) {
         // Send game state to every client
         g = game->next;
         while (g != NULL) {
-            //Don't send to bullets etc
-            if(g->sock < 0) {
-                g = g->next;
-                continue;
-            }
-            if ((nbytes = send(g->sock, sendbuf, status, 0)) == -1) {
-                perror("Thread: send error");
+            // Send only to player objects
+            if (g->type == PLAYER) {
+                if ((nbytes = send(g->data, sendbuf, status, 0)) == -1) {
+                    perror("Thread: send error");
+                }
             }
             g = g->next;
+        }
+
+        // Move bullets every BULLET_INTERVAL 'th loop
+        if(++i % BULLET_INTERVAL == 0) {
+            updateBullets(game, m);
+        }
+
+        // Spawn tree, but don't spawn if game is empty
+        if(i % TREE_INTERVAL == 0) {
+            if(getPlayerCount(game)) {
+                spawnTree(game, m);
+            }
         }
 
         // Release the lock

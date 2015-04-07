@@ -9,7 +9,7 @@
 /* Functions that add something to the list:*/
 
 // Adds player to the gamestate linked-list
-int addPlayer(Gamestate*, ID, Coord, int, char, char);
+int addObject(Gamestate*, ID, Coord, int, char, Type);
 
 // Add bullet next to a shooting player
 int addBullet(Gamestate*, Mapdata *, ID, Action);
@@ -19,7 +19,7 @@ int spawnTree(Gamestate*, Mapdata*);
 
 
 
-/*Functions that some other way modify the list:*/
+/*Functions that modify the list:*/
 
 // Moves player to the destination Coord
 int movePlayer(Gamestate*, Mapdata *, ID, Action);

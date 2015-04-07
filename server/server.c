@@ -156,15 +156,15 @@ int checkCollision(Gamestate* g, Coord c) {
 
     while(g) {
         if (g->c.x == c.x && g->c.y == c.y) {
-            //Collision with a bullet
-            if(g->sock == -1) {
+            // Collision with a bullet
+            if(g->type == BULLET) {
                 return -4;
             }
-            //Collision with tree
-            else if(g->sock == -2) {
+            // Collision with a point
+            else if(g->type == POINT) {
                 return -5;
             }
-            //Collision with player
+            // Collision with player
             else {
                 return -3;
             }
@@ -195,13 +195,12 @@ int sendAnnounce(Gamestate* g, char* msg, size_t len, ID id) {
             g = g->next;
             continue;
         }
-        if(g->sock < 0) {
-            g = g->next;
-            continue;
-        }
-        if (send(g->sock, msg, len, 0) < 0) {
-            perror("send error");
-            return -3;
+        // Only send to player objects
+        if (g->type == PLAYER) {
+            if (send(g->data, msg, len, 0) < 0) {
+                perror("send error");
+                return -3;
+            }
         }
         g = g->next;
     }

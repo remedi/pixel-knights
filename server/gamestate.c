@@ -29,8 +29,8 @@ int spawnTree(Gamestate* g, Mapdata* m) {
         return status;
     }
 
-    //Create new tree 'character'. Sock -2 means that it is tree
-    status = addPlayer(g, createID(g), random, -2, '$', 3);
+    // Add point object
+    status = addObject(g, createID(g), random, -1, '$', POINT);
     if(status) {
         return status;
     }
@@ -40,7 +40,7 @@ int spawnTree(Gamestate* g, Mapdata* m) {
 
 
 // Adds player to the gamestate linked-list
-int addPlayer(Gamestate* g, ID id, Coord c, int sock, char sign, char data) {
+int addObject(Gamestate* g, ID id, Coord c, int data, char sign, Type t) {
 
     // If gamestate NULL
     if (!g)
@@ -55,14 +55,14 @@ int addPlayer(Gamestate* g, ID id, Coord c, int sock, char sign, char data) {
         g = g->next;
 
     // Allocate memory for player and assign values
-    Gamestate* player = malloc(sizeof(Gamestate));
-    player->id = id;
-    player->c = c;
-    player->sign = sign;
-    player->sock = sock;
-    player->data = data;
-    player->next = NULL;
-    g->next = player;
+    Gamestate* object = malloc(sizeof(Gamestate));
+    object->id = id;
+    object->c = c;
+    object->sign = sign;
+    object->data = data;
+    object->type = t;
+    object->next = NULL;
+    g->next = object;
 
     return 0;
 }
@@ -114,7 +114,7 @@ uint8_t getPlayerCount(Gamestate* g) {
 
     // Iterate all the elements
     while (g != NULL) {
-        if(g->sock > 0) 
+        if (g->type == PLAYER) 
             size++;
         g = g->next;
     }
@@ -131,7 +131,7 @@ uint8_t getTreeCount(Gamestate* g) {
 
     // Iterate all the elements
     while (g != NULL) {
-        if(g->sock == -2) 
+        if (g->type == POINT) 
             size++;
         g = g->next;
     }
@@ -158,7 +158,7 @@ int addBullet(Gamestate *g, Mapdata *map_data, ID id, Action a) {
             temp_coord.x++;
             if (!checkWall(map_data, temp_coord)) {
                 if (!checkCollision(game, temp_coord)) {
-                    if(addPlayer(game, createID(g), temp_coord, -1, '*', RIGHT) != 0) {
+                    if(addObject(game, createID(g), temp_coord, RIGHT, '*', BULLET) != 0) {
                         return -5;
                     }
                     break;
@@ -170,7 +170,7 @@ int addBullet(Gamestate *g, Mapdata *map_data, ID id, Action a) {
             temp_coord.x--;
             if (!checkWall(map_data, temp_coord)) {
                 if (!checkCollision(game, temp_coord)) {
-                    if(addPlayer(game, createID(g), temp_coord, -1, '*', LEFT) != 0) {
+                    if(addObject(game, createID(g), temp_coord, LEFT, '*', BULLET) != 0) {
                         return -5;
                     }
                     break;
@@ -182,7 +182,7 @@ int addBullet(Gamestate *g, Mapdata *map_data, ID id, Action a) {
             temp_coord.y--;
             if (!checkWall(map_data, temp_coord)) {
                 if (!checkCollision(game, temp_coord)) {
-                    if(addPlayer(game, createID(g), temp_coord, -1, '*', UP) != 0) {
+                    if(addObject(game, createID(g), temp_coord, UP, '*', BULLET) != 0) {
                         return -5;
                     }
                     break;
@@ -194,7 +194,7 @@ int addBullet(Gamestate *g, Mapdata *map_data, ID id, Action a) {
             temp_coord.y++;
             if (!checkWall(map_data, temp_coord)) {
                 if (!checkCollision(game, temp_coord)) {
-                    if(addPlayer(game, createID(g), temp_coord, -1, '*', DOWN) != 0) {
+                    if(addObject(game, createID(g), temp_coord, DOWN, '*', BULLET) != 0) {
                         return -5;
                     }
                     break;
@@ -219,7 +219,7 @@ int updateBullets(Gamestate* g, Mapdata *map_data) {
         return -1;
 
     while(g != NULL) {
-        if(g->sock == -1) {
+        if(g->type == BULLET) {
             //Bullets move as normal players
             if(movePlayer(game, map_data, g->id, g->data) == -3) {
                 //If bullet collides with anything, remove it
@@ -361,7 +361,7 @@ int printPlayers(Gamestate* g) {
     g = g->next;
     printf("Current players:\n");
     while (g != NULL) {
-        printf("%02x: (%hhu,%hhu) - %c @ %d\n", g->id, g->c.x, g->c.y, g->sign, g->sock);
+        printf("%02x: (%hhu,%hhu) - %c @ %d\n", g->id, g->c.x, g->c.y, g->sign, g->data);
         g = g->next;
     }
     printf("\n");

@@ -11,18 +11,25 @@ typedef uint8_t ID;
 typedef struct coodinate_s {
     uint8_t x;
     uint8_t y;
-}Coord;
+} Coord;
+
+// Gamestate object types
+typedef enum {
+    PLAYER,
+    BULLET,
+    POINT
+} Type;
 
 // Forward declaration of Gamestate
 typedef struct gamestate_s Gamestate;
 
-// Gamedata structure is a linked list (server side)
+// Gamedata structure is a linked list
 struct gamestate_s {
     ID id;
     Coord c;
     char sign;
-    int sock;
-    char data;
+    int data;
+    Type type;
     Gamestate* next;
 };
 
