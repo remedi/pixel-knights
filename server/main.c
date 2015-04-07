@@ -316,15 +316,11 @@ int main(int argc, char *argv[]) {
                         if (nbytes < 2)
                             continue;
 
-                        id = createID();
+                        id = createID(&game);
 
-			//Generate random coordinates to c:
-			pthread_mutex_lock(&lock);
-			randomCoord(&game, &map, &c);
-			pthread_mutex_unlock(&lock);
-
-                        // Lock game state and add player
+                        // Generate random coordinates to c and add player
                         pthread_mutex_lock(&lock);
+                        randomCoord(&game, &map, &c);
                         status = addPlayer(&game, id, c, i, recvbuf[1], 0);
                         pthread_mutex_unlock(&lock);
 
@@ -432,7 +428,7 @@ int main(int argc, char *argv[]) {
                         pthread_mutex_unlock(&lock);
                         if (send(i, sendbuf, 2, 0) < 0)
                             perror("send");
-                        
+
                         // Clear the descriptor from the master set
                         FD_CLR(i, &master);
                         close(i);
@@ -441,12 +437,12 @@ int main(int argc, char *argv[]) {
 
                     // Just to be able to remotely close the server...
                     else if (!strncmp(recvbuf, "KILL", 4)) {
-			pthread_cancel(gamestate_thread);
-			pthread_join(gamestate_thread, NULL);
-			freePlayers(&game);
-			freeMap(&map);
-			free(sendbuf);
-			free(recvbuf);
+                        pthread_cancel(gamestate_thread);
+                        pthread_join(gamestate_thread, NULL);
+                        freePlayers(&game);
+                        freeMap(&map);
+                        free(sendbuf);
+                        free(recvbuf);
                         printf("Exiting...\n");
                         return 0;
                     }

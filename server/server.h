@@ -13,7 +13,7 @@ int randomCoord(Gamestate *, Mapdata *, Coord *);
 int max(int, int);
 
 // Create new ID for new client connection
-ID createID(void);
+ID createID(Gamestate*);
 
 // Check that the coordinate is valid 
 int checkCollision(Gamestate*, Coord);

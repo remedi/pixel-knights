@@ -16,10 +16,10 @@
 #define G_INTERVAL_USEC 100000
 
 //Bullets are moved according to this value, smaller the faster: 
-#define BULLET_INTERVAL 10
+#define BULLET_INTERVAL 1
 
 //Trees are spawned according to this value, smaller the faster: 
-#define TREE_INTERVAL 10
+#define TREE_INTERVAL 100
 
 // Send game state to all connected clients periodically
 void* sendGamestate(void* ctx) {
@@ -43,19 +43,17 @@ void* sendGamestate(void* ctx) {
         // Lock the game state for reading
         pthread_mutex_lock(c->lock);
 
-	// Move bullets every BULLET_INTERVAL 'th loop
-	i++;
-	if(i % BULLET_INTERVAL == 0) {
-	    updateBullets(game, m);
-	}
+        // Move bullets every BULLET_INTERVAL 'th loop
+        if(++i % BULLET_INTERVAL == 0) {
+            updateBullets(game, m);
+        }
 
-	// Spawn tree, but don't spawn if game is empty
-	if(i % TREE_INTERVAL == 0) {
-	    if(getPlayerCount(game)) {
-		spawnTree(game, m);
-	    }
-	}
-
+        // Spawn tree, but don't spawn if game is empty
+        if(i % TREE_INTERVAL == 0) {
+            if(getPlayerCount(game)) {
+                spawnTree(game, m);
+            }
+        }
 
         // Parse game state message
         status = parseGamestate(game, sendbuf, MAXDATASIZE);
@@ -77,14 +75,14 @@ void* sendGamestate(void* ctx) {
         }
 
         // Send game state to every client
-        g = game;
-        while (g->next != NULL) {
-	    //Don't send to bullets etc
-	    if(g->next->sock < 0) {
-		g = g->next;
-		continue;
-	    }
-            if ((nbytes = send(g->next->sock, sendbuf, status, 0)) == -1) {
+        g = game->next;
+        while (g != NULL) {
+            //Don't send to bullets etc
+            if(g->sock < 0) {
+                g = g->next;
+                continue;
+            }
+            if ((nbytes = send(g->sock, sendbuf, status, 0)) == -1) {
                 perror("Thread: send error");
             }
             g = g->next;

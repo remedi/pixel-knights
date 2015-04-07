@@ -19,27 +19,25 @@
 //Generate random coordinates, that are not occupied by anything at the map
 int randomCoord(Gamestate *g, Mapdata *m, Coord *c) {
 
+    Coord random;
+
     if(!g || !m) {
-	return -1;
+        return -1;
     }
     //Dont check for game collision if gamestate is empty
-    int skip_game_col = 0;
     if(g->next == NULL) {
-	skip_game_col = 1;
+        c->x = 1;
+        c->y = 1;
+        return 0;
     }
 
-    int height = m->height;
-    int width = m->width;
     //Two types of collisions to be avoided: collision with a element in gamestate, or with wall in mapdata
     int game_col = 0, map_col = 1;
-    Coord random;
     while(game_col || map_col) {
-	random.x = rand() % width;
-	random.y = rand() % height;
-	map_col = checkWall(m, random);
-	if(!skip_game_col) {
-	    game_col = checkCollision(g, random);
-	}
+        random.x = rand() % m->width;
+        random.y = rand() % m->height;
+        map_col = checkWall(m, random);
+        game_col = checkCollision(g, random);
     }
     c->x = random.x;
     c->y = random.y;
@@ -63,26 +61,26 @@ int registerToMM(char *MM_IP, char *MM_port, char map_nr, struct sockaddr_in* my
     // Parse address and port
     IP4 = isIpv4(MM_IP);
     if(IP4) {
-	sock_addr_in = ipv4_parser(MM_IP, MM_port);
-	if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-	    perror("MM socket, create");
-	    return -1;
-	}
-	if (connect(sock, (struct sockaddr *) &sock_addr_in, sizeof(sock_addr_in)) == -1) {
-	    perror("MM socket, connect");
-	    return -1;
-	}
+        sock_addr_in = ipv4_parser(MM_IP, MM_port);
+        if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+            perror("MM socket, create");
+            return -1;
+        }
+        if (connect(sock, (struct sockaddr *) &sock_addr_in, sizeof(sock_addr_in)) == -1) {
+            perror("MM socket, connect");
+            return -1;
+        }
     }
     else {
-	sock_addr_in6 = ipv6_parser(MM_IP, MM_port);
-	if ((sock = socket(AF_INET6, SOCK_STREAM, 0)) < 0) {
-	    perror("MM socket, create");
-	    return -1;
-	}
-	if (connect(sock, (struct sockaddr *) &sock_addr_in6, sizeof(sock_addr_in6)) == -1) {
-	    perror("MM socket, connect");
-	    return -1;
-	}
+        sock_addr_in6 = ipv6_parser(MM_IP, MM_port);
+        if ((sock = socket(AF_INET6, SOCK_STREAM, 0)) < 0) {
+            perror("MM socket, create");
+            return -1;
+        }
+        if (connect(sock, (struct sockaddr *) &sock_addr_in6, sizeof(sock_addr_in6)) == -1) {
+            perror("MM socket, connect");
+            return -1;
+        }
     }
 
     // Send server information
@@ -98,18 +96,18 @@ int registerToMM(char *MM_IP, char *MM_port, char map_nr, struct sockaddr_in* my
 
     // OK reply from MM
     if (message[0] == 'O') {
-	if(IP4) {
-	    if (getsockname(sock, (struct sockaddr *) my_IP, &my_IP_len) == -1) {
-		perror("getsockname");
-		return -1;
-	    } 
-	}
-	else {
-	    if (getsockname(sock, (struct sockaddr *) my_IP6, &my_IP6_len) == -1) {
-		perror("getsockname");
-		return -1;
-	    } 
-	}
+        if(IP4) {
+            if (getsockname(sock, (struct sockaddr *) my_IP, &my_IP_len) == -1) {
+                perror("getsockname");
+                return -1;
+            } 
+        }
+        else {
+            if (getsockname(sock, (struct sockaddr *) my_IP6, &my_IP6_len) == -1) {
+                perror("getsockname");
+                return -1;
+            } 
+        }
         close(sock);
         return 0;
     }
@@ -129,9 +127,16 @@ int max(int a, int b) {
 }
 
 // Returns the ID of a new client connection
-ID createID(void) {
+ID createID(Gamestate* g) {
 
     static ID id = 0x01;
+
+    if (!id)
+        id++;
+
+    while (findPlayer(g, id))
+        ++id;
+
     return id++;
 }
 
@@ -151,18 +156,18 @@ int checkCollision(Gamestate* g, Coord c) {
 
     while(g) {
         if (g->c.x == c.x && g->c.y == c.y) {
-	    //Collision with a bullet
-	    if(g->sock == -1) {
-		return -4;
-	    }
-	    //Collision with tree
-	    else if(g->sock == -2) {
-		return -5;
-	    }
-	    //Collision with player
-	    else {
-		return -3;
-	    }
+            //Collision with a bullet
+            if(g->sock == -1) {
+                return -4;
+            }
+            //Collision with tree
+            else if(g->sock == -2) {
+                return -5;
+            }
+            //Collision with player
+            else {
+                return -3;
+            }
         }
         g = g->next;
     }
@@ -190,10 +195,10 @@ int sendAnnounce(Gamestate* g, char* msg, size_t len, ID id) {
             g = g->next;
             continue;
         }
-	if(g->sock < 0) {
-	    g = g->next;
-	    continue;
-	}
+        if(g->sock < 0) {
+            g = g->next;
+            continue;
+        }
         if (send(g->sock, msg, len, 0) < 0) {
             perror("send error");
             return -3;

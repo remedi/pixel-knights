@@ -20,19 +20,19 @@ int spawnTree(Gamestate* g, Mapdata* m) {
     status = getTreeCount(g);
     if(status > 10) {
         // Don't spawn a new tree if there is 'too many'. Return with no error
-	return 0;
+        return 0;
     }
 
     //Generate random coordinates for tree
     status = randomCoord(g, m, &random);
     if(status) {
-	return status;
+        return status;
     }
 
     //Create new tree 'character'. Sock -2 means that it is tree
-    status = addPlayer(g, createID(), random, -2, 'T', 3);
+    status = addPlayer(g, createID(g), random, -2, '$', 3);
     if(status) {
-	return status;
+        return status;
     }
 
     return 0;
@@ -98,7 +98,7 @@ uint8_t getSize(Gamestate* g) {
 
     // Iterate all the elements
     while (g != NULL) {
-	size++;
+        size++;
         g = g->next;
     }
     return size;
@@ -114,8 +114,8 @@ uint8_t getPlayerCount(Gamestate* g) {
 
     // Iterate all the elements
     while (g != NULL) {
-	if(g->sock > 0) 
-	    size++;
+        if(g->sock > 0) 
+            size++;
         g = g->next;
     }
     return size;
@@ -131,8 +131,8 @@ uint8_t getTreeCount(Gamestate* g) {
 
     // Iterate all the elements
     while (g != NULL) {
-	if(g->sock == -2) 
-	    size++;
+        if(g->sock == -2) 
+            size++;
         g = g->next;
     }
     return size;
@@ -154,56 +154,56 @@ int addBullet(Gamestate *g, Mapdata *map_data, ID id, Action a) {
     temp_coord = g->c;
 
     switch(a) {
-	case SHOOT_RIGHT:
-	    temp_coord.x++;
-	    if (!checkWall(map_data, temp_coord)) {
-		if (!checkCollision(game, temp_coord)) {
-		    if(addPlayer(game, createID(), temp_coord, -1, 'B', RIGHT) != 0) {
-			return -5;
-		    }
-		    break;
-		}
-	    }
-	    return -3;
+        case SHOOT_RIGHT:
+            temp_coord.x++;
+            if (!checkWall(map_data, temp_coord)) {
+                if (!checkCollision(game, temp_coord)) {
+                    if(addPlayer(game, createID(g), temp_coord, -1, '*', RIGHT) != 0) {
+                        return -5;
+                    }
+                    break;
+                }
+            }
+            return -3;
 
-	case SHOOT_LEFT:
-	    temp_coord.x--;
-	    if (!checkWall(map_data, temp_coord)) {
-		if (!checkCollision(game, temp_coord)) {
-		    if(addPlayer(game, createID(), temp_coord, -1, 'B', LEFT) != 0) {
-			return -5;
-		    }
-		    break;
-		}
-	    }
-	    return -3;
+        case SHOOT_LEFT:
+            temp_coord.x--;
+            if (!checkWall(map_data, temp_coord)) {
+                if (!checkCollision(game, temp_coord)) {
+                    if(addPlayer(game, createID(g), temp_coord, -1, '*', LEFT) != 0) {
+                        return -5;
+                    }
+                    break;
+                }
+            }
+            return -3;
 
-	case SHOOT_UP:
-	    temp_coord.y--;
-	    if (!checkWall(map_data, temp_coord)) {
-		if (!checkCollision(game, temp_coord)) {
-		    if(addPlayer(game, createID(), temp_coord, -1, 'B', UP) != 0) {
-			return -5;
-		    }
-		    break;
-		}
-	    }
-	    return -3;
+        case SHOOT_UP:
+            temp_coord.y--;
+            if (!checkWall(map_data, temp_coord)) {
+                if (!checkCollision(game, temp_coord)) {
+                    if(addPlayer(game, createID(g), temp_coord, -1, '*', UP) != 0) {
+                        return -5;
+                    }
+                    break;
+                }
+            }
+            return -3;
 
-	case SHOOT_DOWN:
-	    temp_coord.y++;
-	    if (!checkWall(map_data, temp_coord)) {
-		if (!checkCollision(game, temp_coord)) {
-		    if(addPlayer(game, createID(), temp_coord, -1, 'B', DOWN) != 0) {
-			return -5;
-		    }
-		    break;
-		}
-	    }
-	    return -3;
+        case SHOOT_DOWN:
+            temp_coord.y++;
+            if (!checkWall(map_data, temp_coord)) {
+                if (!checkCollision(game, temp_coord)) {
+                    if(addPlayer(game, createID(g), temp_coord, -1, '*', DOWN) != 0) {
+                        return -5;
+                    }
+                    break;
+                }
+            }
+            return -3;
 
-	default:
-	    return -4;
+        default:
+            return -4;
     }
     return 0;
 }
@@ -219,14 +219,14 @@ int updateBullets(Gamestate* g, Mapdata *map_data) {
         return -1;
 
     while(g != NULL) {
-	if(g->sock == -1) {
-	    //Bullets move as normal players
-	    if(movePlayer(game, map_data, g->id, g->data) == -3) {
-		//If bullet collides with anything, remove it
-		removePlayer(game, g->id);
-	    }
-	}
-	g = g->next;
+        if(g->sock == -1) {
+            //Bullets move as normal players
+            if(movePlayer(game, map_data, g->id, g->data) == -3) {
+                //If bullet collides with anything, remove it
+                removePlayer(game, g->id);
+            }
+        }
+        g = g->next;
     }
     return 0;
 }
@@ -249,60 +249,60 @@ int movePlayer(Gamestate* g, Mapdata *map_data, ID id, Action a) {
 
     // Update coordinates
     switch(a) {
-	case UP:
-	    temp_coord.y--;
-	    if (!checkWall(map_data, temp_coord)) {
-		if (!checkCollision(game, temp_coord)) {
-		    g->c.y--;
-		    break;
-		}
-	    }
-	    return -3;
+        case UP:
+            temp_coord.y--;
+            if (!checkWall(map_data, temp_coord)) {
+                if (!checkCollision(game, temp_coord)) {
+                    g->c.y--;
+                    break;
+                }
+            }
+            return -3;
 
-	case DOWN:
-	    temp_coord.y++;
-	    if (!checkWall(map_data, temp_coord)) {
-		if (!checkCollision(game, temp_coord)) {
-		    g->c.y++;
-		    break;
-		}
-	    }
-	    return -3;
+        case DOWN:
+            temp_coord.y++;
+            if (!checkWall(map_data, temp_coord)) {
+                if (!checkCollision(game, temp_coord)) {
+                    g->c.y++;
+                    break;
+                }
+            }
+            return -3;
 
-	case LEFT:
-	    temp_coord.x--;
-	    if (!checkWall(map_data, temp_coord)) {
-		if (!checkCollision(game, temp_coord)) {
-		    g->c.x--;
-		    break;
-		}
-	    }
-	    return -3;
+        case LEFT:
+            temp_coord.x--;
+            if (!checkWall(map_data, temp_coord)) {
+                if (!checkCollision(game, temp_coord)) {
+                    g->c.x--;
+                    break;
+                }
+            }
+            return -3;
 
-	case RIGHT:
-	    temp_coord.x++;
-	    if (!checkWall(map_data, temp_coord)) {
-		if (!checkCollision(game, temp_coord)) {
-		    g->c.x++;
-		    break;
-		}
-	    }
-	    return -3;
+        case RIGHT:
+            temp_coord.x++;
+            if (!checkWall(map_data, temp_coord)) {
+                if (!checkCollision(game, temp_coord)) {
+                    g->c.x++;
+                    break;
+                }
+            }
+            return -3;
 
-	case SHOOT_RIGHT:
-	    return addBullet(game, map_data, id, a);
+        case SHOOT_RIGHT:
+            return addBullet(game, map_data, id, a);
 
-	case SHOOT_LEFT:
-	    return addBullet(game, map_data, id, a);
+        case SHOOT_LEFT:
+            return addBullet(game, map_data, id, a);
 
-	case SHOOT_DOWN:
-	    return addBullet(game, map_data, id, a);
+        case SHOOT_DOWN:
+            return addBullet(game, map_data, id, a);
 
-	case SHOOT_UP:
-	    return addBullet(game, map_data, id, a);
+        case SHOOT_UP:
+            return addBullet(game, map_data, id, a);
 
-	default:
-	    return -4;
+        default:
+            return -4;
     }
     return 0;
 }

@@ -63,7 +63,7 @@ int serverListParser(char *buf) {
 
 //Read input character or chat message from terminal. If it's a chat message, store it in buffer.
 char getInput(char *buffer) {
-    char character, direction;
+    char character;
     char buf[40];
     struct termios term_settings, old_settings;
     character = getchar();
@@ -89,15 +89,6 @@ char getInput(char *buffer) {
         sprintf(buffer, "%s", buf);
         pthread_mutex_unlock(&mtx);
     }
-    else if(character == 'e') {
-        pthread_mutex_lock(&mtx);
-        printf("\nWhich direction do you want to shoot? (Hint: wasd)\n");
-	while(direction != 'a' && direction != 'w' && direction != 's' && direction != 'd') {
-	    direction = getchar();
-	}
-        pthread_mutex_unlock(&mtx);
-	character = 'e' + direction;
-    }
     return character;
 }
 
@@ -118,16 +109,16 @@ char *processCommand(char id, unsigned char input, char *buf) {
 	case 'd':
 	    a = RIGHT;
 	    break;
-	case ('e' + 'w'):
+	case 'i':
 	    a = SHOOT_UP;
 	    break;
-	case ('e' + 's'):
+	case 'k':
 	    a = SHOOT_DOWN;
 	    break;
-	case ('e' + 'a'):
+	case 'j':
 	    a = SHOOT_LEFT;
 	    break;
-	case ('e' + 'd'):
+	case 'l':
 	    a = SHOOT_RIGHT;
 	    break;
 	default:
@@ -352,7 +343,7 @@ int main(int argc, char *argv[]) {
         else if(input_char == 'h') {
             pthread_mutex_lock(&mtx);
             printf("HELP: Movement: 'wasd'\n");
-            printf("HELP: Shooting: First press 'e', then any of the directions: 'wasd'\n");
+            printf("HELP: Shooting: 'ijkl'\n");
             printf("HELP: Chatting: First press 'c', then type your message and press enter \n");
             printf("HELP: Quit: '0' or 'q'\n");
             printf("Press any key to continue\n");
