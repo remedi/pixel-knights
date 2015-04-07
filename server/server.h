@@ -6,6 +6,9 @@
 
 #include "../typedefs.h"
 
+// Spawn tree to a random location
+int spawnScorePoint(Gamestate*, Mapdata*);
+
 //Generate random coordinates, that are not occupied by anything from the map
 int randomCoord(Gamestate *, Mapdata *, Coord *);
 

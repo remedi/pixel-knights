@@ -388,15 +388,15 @@ int main(int argc, char *argv[]) {
 
                         // Remove player and lock game state
                         pthread_mutex_lock(&lock);
-                        status = removePlayer(&game, id);
+                        status = removeObject(&game, id);
                         pthread_mutex_unlock(&lock);
 
                         if (status == -1) {
-                            fprintf(stderr, "removePlayer %02x: Invalid game state\n", id);
+                            fprintf(stderr, "removeObject %02x: Invalid game state\n", id);
                             continue;
                         }
                         else if (status == -2) {
-                            fprintf(stderr, "removePlayer %02x: ID not found\n", id);
+                            fprintf(stderr, "removeObject %02x: ID not found\n", id);
                             continue;
                         }
                         else
@@ -437,14 +437,8 @@ int main(int argc, char *argv[]) {
 
                     // Just to be able to remotely close the server...
                     else if (!strncmp(recvbuf, "KILL", 4)) {
-                        pthread_cancel(gamestate_thread);
-                        pthread_join(gamestate_thread, NULL);
-                        freePlayers(&game);
-                        freeMap(&map);
-                        free(sendbuf);
-                        free(recvbuf);
-                        printf("Exiting...\n");
-                        return 0;
+                        exit_clean = 1;
+                        break;
                     }
                 }
             }
@@ -452,7 +446,7 @@ int main(int argc, char *argv[]) {
     }
     pthread_cancel(gamestate_thread);
     pthread_join(gamestate_thread, NULL);
-    freePlayers(&game);
+    freeGamestate(&game);
     freeMap(&map);
     free(sendbuf);
     free(recvbuf);

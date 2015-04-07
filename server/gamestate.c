@@ -12,34 +12,7 @@
 #include "server.h" 
 
 
-//Spawn a new tree 'character' in a random place
-int spawnTree(Gamestate* g, Mapdata* m) {
-    Coord random;
-    int status;
-
-    status = getTreeCount(g);
-    if(status > 10) {
-        // Don't spawn a new tree if there is 'too many'. Return with no error
-        return 0;
-    }
-
-    //Generate random coordinates for tree
-    status = randomCoord(g, m, &random);
-    if(status) {
-        return status;
-    }
-
-    // Add point object
-    status = addObject(g, createID(g), random, -1, '$', POINT);
-    if(status) {
-        return status;
-    }
-
-    return 0;
-}
-
-
-// Adds player to the gamestate linked-list
+// Adds object to the gamestate linked-list
 int addObject(Gamestate* g, ID id, Coord c, int data, char sign, Type t) {
 
     // If gamestate NULL
@@ -47,7 +20,7 @@ int addObject(Gamestate* g, ID id, Coord c, int data, char sign, Type t) {
         return -1;
 
     // If ID is already in the game
-    if (findPlayer(g, id))
+    if (findObject(g, id))
         return -2;
 
     // Find the last element of linked list
@@ -68,13 +41,13 @@ int addObject(Gamestate* g, ID id, Coord c, int data, char sign, Type t) {
 }
 
 // Finds pointer to the Gamestate struct containing ID
-Gamestate* findPlayer(Gamestate* g, ID id) {
+Gamestate* findObject(Gamestate* g, ID id) {
 
     // If gamestate NULL
     if (!g)
         return NULL;
 
-    // Find the right player
+    // Find the right object
     while (g->next != NULL) {
         if (g->id == id)
             break;
@@ -93,7 +66,7 @@ uint8_t getSize(Gamestate* g) {
 
     uint8_t size = 0;
 
-    // First element does not contain player
+    // First element does not contain object
     g = g->next;
 
     // Iterate all the elements
@@ -122,11 +95,11 @@ uint8_t getPlayerCount(Gamestate* g) {
 }
 
 // Gets the amount of trees in Gamestate
-uint8_t getTreeCount(Gamestate* g) {
+uint8_t getScorePointCount(Gamestate* g) {
 
     uint8_t size = 0;
 
-    // First element does not contain player
+    // First element does not contain object
     g = g->next;
 
     // Iterate all the elements
@@ -148,7 +121,7 @@ int addBullet(Gamestate *g, Mapdata *map_data, ID id, Action a) {
         return -1;
 
     // Iterate the linked-list
-    if (!(g = findPlayer(g, id)))
+    if (!(g = findObject(g, id)))
         return -2;
 
     temp_coord = g->c;
@@ -223,7 +196,7 @@ int updateBullets(Gamestate* g, Mapdata *map_data) {
             //Bullets move as normal players
             if(movePlayer(game, map_data, g->id, g->data) == -3) {
                 //If bullet collides with anything, remove it
-                removePlayer(game, g->id);
+                removeObject(game, g->id);
             }
         }
         g = g->next;
@@ -242,7 +215,7 @@ int movePlayer(Gamestate* g, Mapdata *map_data, ID id, Action a) {
         return -1;
 
     // Iterate the linked-list
-    if (!(g = findPlayer(g, id)))
+    if (!(g = findObject(g, id)))
         return -2;
 
     temp_coord = g->c;
@@ -315,7 +288,7 @@ int changePlayerSign(Gamestate* g, ID id, char sign) {
         return -1;
 
     // Iterate the linked-list
-    if (!(g = findPlayer(g, id)))
+    if (!(g = findObject(g, id)))
         return -2;
 
     // Update sign
@@ -325,7 +298,7 @@ int changePlayerSign(Gamestate* g, ID id, char sign) {
 }
 
 // Removes the player from the gamestate linked-list
-int removePlayer(Gamestate* g, ID id) {
+int removeObject(Gamestate* g, ID id) {
 
     // If gamestate NULL
     if (!g)
@@ -347,7 +320,7 @@ int removePlayer(Gamestate* g, ID id) {
 }
 
 // Print for debugging purposes
-int printPlayers(Gamestate* g) {
+int printObjects(Gamestate* g) {
 
     // If gamestate NULL
     if (!g)
@@ -357,9 +330,9 @@ int printPlayers(Gamestate* g) {
     if (g->next == NULL)
         return -2;
 
-    // First element does not contain player
+    // First element does not contain object
     g = g->next;
-    printf("Current players:\n");
+    printf("Current objects:\n");
     while (g != NULL) {
         printf("%02x: (%hhu,%hhu) - %c @ %d\n", g->id, g->c.x, g->c.y, g->sign, g->data);
         g = g->next;
@@ -390,7 +363,7 @@ int parseGamestate(Gamestate* g, void* s, int len) {
     data[0] = 0x47; // ASCII G
     data[1] = getSize(g);
 
-    // First element does not contain player
+    // First element does not contain object
     g = g->next;
 
     while (g != NULL) {
@@ -411,13 +384,13 @@ int parseGamestate(Gamestate* g, void* s, int len) {
 }
 
 // Terminates the Gamestate instance
-void freePlayers(Gamestate* g) {
+void freeGamestate(Gamestate* g) {
 
     // If gamestate NULL
     if (!g)
         return;
 
-    // First element does not contain player
+    // First element does not contain object
     g = g->next;
 
     // Free all memory

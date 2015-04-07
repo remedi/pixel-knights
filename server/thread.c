@@ -10,6 +10,7 @@
 #include <pthread.h>
 
 #include "gamestate.h"
+#include "server.h"
 #include "thread.h"
 
 #define MAXDATASIZE 128
@@ -79,10 +80,10 @@ void* sendGamestate(void* ctx) {
             updateBullets(game, m);
         }
 
-        // Spawn tree, but don't spawn if game is empty
+        // Spawn score point, but don't spawn if game is empty
         if(i % TREE_INTERVAL == 0) {
             if(getPlayerCount(game)) {
-                spawnTree(game, m);
+                spawnScorePoint(game, m);
             }
         }
 

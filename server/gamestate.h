@@ -14,9 +14,6 @@ int addObject(Gamestate*, ID, Coord, int, char, Type);
 // Add bullet next to a shooting player
 int addBullet(Gamestate*, Mapdata *, ID, Action);
 
-// Spawn tree to a random location
-int spawnTree(Gamestate*, Mapdata*);
-
 
 
 /*Functions that modify the list:*/
@@ -31,17 +28,17 @@ int updateBullets(Gamestate*, Mapdata*);
 int changePlayerSign(Gamestate*, ID, char);
 
 // Removes player from the gamestate linked-list
-int removePlayer(Gamestate*, ID);
+int removeObject(Gamestate*, ID);
 
 // Terminates the Gamestate instance
-void freePlayers(Gamestate*);
+void freeGamestate(Gamestate*);
 
 
 
 /* Functions that provide information about the list:*/
 
 // Finds pointer to the Gamestate struct containing ID
-Gamestate* findPlayer(Gamestate*, ID);
+Gamestate* findObject(Gamestate*, ID);
 
 // Gets the amount of elements in Gamestate
 uint8_t getSize(Gamestate*);
@@ -50,10 +47,10 @@ uint8_t getSize(Gamestate*);
 uint8_t getPlayerCount(Gamestate*);
 
 // Gets the amount of trees in Gamestate
-uint8_t getTreeCount(Gamestate*);
+uint8_t getScorePointCount(Gamestate*);
 
 // Produces string that contains all data about players
-int printPlayers(Gamestate*);
+int printObjects(Gamestate*);
 
 // Parses the data that gets sent to the players
 int parseGamestate(Gamestate*, void*, int);

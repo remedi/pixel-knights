@@ -16,6 +16,31 @@
 #include "server.h"
 #include "gamestate.h"
 
+// Spawns a new score point to the game in random place
+int spawnScorePoint(Gamestate* g, Mapdata* m) {
+    Coord random;
+    int status;
+
+    if (getScorePointCount(g) > 5) {
+        // Don't spawn a new tree if there is 'too many'.
+        // Return with no error
+        return 0;
+    }
+
+    // Generate random coordinates for tree
+    if ((status = randomCoord(g, m, &random))) {
+        return status;
+    }
+
+    // Add point object
+    if ((status = addObject(g, createID(g), random, -1, '$', POINT))) {
+        return status;
+    }
+
+    return 0;
+}
+
+
 //Generate random coordinates, that are not occupied by anything at the map
 int randomCoord(Gamestate *g, Mapdata *m, Coord *c) {
 
@@ -134,7 +159,7 @@ ID createID(Gamestate* g) {
     if (!id)
         id++;
 
-    while (findPlayer(g, id))
+    while (findObject(g, id))
         ++id;
 
     return id++;
