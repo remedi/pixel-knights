@@ -25,7 +25,7 @@ int max(int, int);
 ID createID(Gamestate*);
 
 // Check that the coordinate is valid 
-int checkCollision(Gamestate*, Coord);
+ID checkCollision(Gamestate*, Coord);
 
 // Sends announcement to all players except ID
 int sendAnnounce(Gamestate*, char*, size_t, ID);

@@ -20,6 +20,8 @@
 int processAction(Gamestate* g, Mapdata *map_data, ID id, Action a) {
     Coord temp_coord;
     Gamestate* game = g;
+    int status = 0;
+    ID collision = 0x00;
 
     // If gamestate NULL
     if (!g)
@@ -31,47 +33,44 @@ int processAction(Gamestate* g, Mapdata *map_data, ID id, Action a) {
 
     temp_coord = g->c;
 
+    // Select action, if collision occurs
+    // the collided ID is stored in collision
     switch(a) {
+
+        // Move the object if action is just a movement
         case UP:
             temp_coord.y--;
-            if (!checkWall(map_data, temp_coord)) {
-                if (!checkCollision(game, temp_coord)) {
+            if (!(status = checkWall(map_data, temp_coord))) {
+                if (!(collision = checkCollision(game, temp_coord)))
                     g->c.y--;
-                    break;
-                }
             }
-            return -3;
+            break;
 
         case DOWN:
             temp_coord.y++;
-            if (!checkWall(map_data, temp_coord)) {
-                if (!checkCollision(game, temp_coord)) {
+            if (!(status = checkWall(map_data, temp_coord))) {
+                if (!(collision = checkCollision(game, temp_coord)))
                     g->c.y++;
-                    break;
-                }
             }
-            return -3;
+            break;
 
         case LEFT:
             temp_coord.x--;
-            if (!checkWall(map_data, temp_coord)) {
-                if (!checkCollision(game, temp_coord)) {
+            if (!(status = checkWall(map_data, temp_coord))) {
+                if (!(collision = checkCollision(game, temp_coord)))
                     g->c.x--;
-                    break;
-                }
             }
-            return -3;
+            break;
 
         case RIGHT:
             temp_coord.x++;
-            if (!checkWall(map_data, temp_coord)) {
-                if (!checkCollision(game, temp_coord)) {
+            if (!(status = checkWall(map_data, temp_coord))) {
+                if (!(collision = checkCollision(game, temp_coord)))
                     g->c.x++;
-                    break;
-                }
             }
-            return -3;
+            break;
 
+        // Create new bullet if the action is shooting
         case SHOOT_RIGHT:
             temp_coord.x++;
             if (!checkWall(map_data, temp_coord)) {
@@ -96,7 +95,7 @@ int processAction(Gamestate* g, Mapdata *map_data, ID id, Action a) {
             temp_coord.y--;
             if (!checkWall(map_data, temp_coord)) {
                 if (!checkCollision(game, temp_coord)) {
-                    if(addObject(game, createID(g), temp_coord, UP, '*', BULLET) != 0)
+                    if(!addObject(game, createID(g), temp_coord, UP, '*', BULLET))
                         break;
                 }
             }
@@ -106,7 +105,7 @@ int processAction(Gamestate* g, Mapdata *map_data, ID id, Action a) {
             temp_coord.y++;
             if (!checkWall(map_data, temp_coord)) {
                 if (!checkCollision(game, temp_coord)) {
-                    if(addObject(game, createID(g), temp_coord, DOWN, '*', BULLET) != 0)
+                    if(!addObject(game, createID(g), temp_coord, DOWN, '*', BULLET))
                         break;
                 }
             }
@@ -115,6 +114,55 @@ int processAction(Gamestate* g, Mapdata *map_data, ID id, Action a) {
         default:
             return -4;
     }
+
+    // Object collided with players or bullets
+    if (collision > 0) {
+
+        // Find the object that we collided with
+        Gamestate* collided = findObject(game, collision);
+
+        // Random coordinates for collision solving
+        randomCoord(game, map_data, &temp_coord);
+
+        // Player collided with a bullet
+        if (g->type == PLAYER && collided->type == BULLET) {
+            removeObject(game, collided->id);
+            g->c = temp_coord;
+        }
+        // Player collided with another player
+        else if (g->type == PLAYER && collided->type == PLAYER)
+            // Illegal move
+            return -3;
+
+        // Player collided with a score point 
+        if (g->type == PLAYER && collided->type == POINT) {
+            g->c = collided->c;
+            removeObject(game, collided->id);
+            // TODO: make better announcements and calculate points
+            sendAnnounce(game, "CPlayer scored a point!", 23, 0);
+        }
+
+        // Bullet collided with a player
+        else if (g->type == BULLET && collided->type == PLAYER) {
+            collided->c = temp_coord;                 
+            removeObject(game, g->id);
+        }
+        // Bullet collided with a point
+        else if (g->type == BULLET && collided->type == POINT)
+            removeObject(game, g->id);
+
+    }
+    // Object collided with a wall
+    else if (status > 0) {
+        if (g->type == BULLET) {
+            removeObject(game, g->id);
+            return 0;
+        }
+        // Illegal move for player
+        return -3;
+    }
+    
+    // No collision or collision solved
     return 0;
 }
 
@@ -131,10 +179,7 @@ int updateBullets(Gamestate* g, Mapdata *map_data) {
     while (g != NULL) {
         if (g->type == BULLET) {
             // Bullets move as normal players
-            if (processAction(game, map_data, g->id, g->data) == -3) {
-                // If bullet collides with anything, remove it
-                g = removeObject(game, g->id);
-            }
+            processAction(game, map_data, g->id, g->data);
         }
         g = g->next;
     }
@@ -291,7 +336,7 @@ ID createID(Gamestate* g) {
 }
 
 // Checks for player collisions in target coordinate
-int checkCollision(Gamestate* g, Coord c) {
+ID checkCollision(Gamestate* g, Coord c) {
 
     // If Gamestate NULL
     if (!g)
@@ -304,20 +349,9 @@ int checkCollision(Gamestate* g, Coord c) {
     // First element does not contain player
     g = g->next;
 
-    while(g) {
+    while (g) {
         if (g->c.x == c.x && g->c.y == c.y) {
-            // Collision with a bullet
-            if(g->type == BULLET) {
-                return -4;
-            }
-            // Collision with a point
-            else if(g->type == POINT) {
-                return -5;
-            }
-            // Collision with player
-            else {
-                return -3;
-            }
+            return g->id;
         }
         g = g->next;
     }
