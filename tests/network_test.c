@@ -53,12 +53,14 @@ bool testPoll(struct sockaddr_in* addr) {
         return false;
     }
 
-    if (n_bytes == 2)
-        if (buffer[0] == 'R')
+    if (n_bytes == 2) {
+        if (buffer[0] == 'R') {
+            close(sock);
             return true;
+        }
+    }
 
     close(sock);
-
     return false;
 }
 
