@@ -247,20 +247,32 @@ int registerToMM(char *MM_IP, char *MM_port, char map_nr, struct sockaddr_in* my
     char message[2];
     socklen_t my_IP_len = sizeof(struct sockaddr_in);
     socklen_t my_IP6_len = sizeof(struct sockaddr_in6);
-    int IP4;
+    int IP4, domain, so_reuseaddr = 1;
 
     // The message sent to MM server contains 'S' + map number
     message[0] = 'S';
     message[1] = map_nr;
 
-    // Parse address and port
     IP4 = isIpv4(MM_IP);
+
+    // Create socket of corred domain. Give it linger option because we will use this port again
+    if(IP4) {
+	domain = AF_INET;
+    }
+    else {
+	domain = AF_INET6;
+    }
+    if ((sock = socket(domain, SOCK_STREAM, 0)) < 0) {
+	perror("MM socket, create");
+	return -1;
+    }
+    if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &so_reuseaddr, sizeof(so_reuseaddr)) == -1) {
+	perror("setsockopt");
+	exit(EXIT_FAILURE);
+    }
+
     if(IP4) {
         sock_addr_in = ipv4_parser(MM_IP, MM_port);
-        if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-            perror("MM socket, create");
-            return -1;
-        }
         if (connect(sock, (struct sockaddr *) &sock_addr_in, sizeof(sock_addr_in)) == -1) {
             perror("MM socket, connect");
             return -1;
@@ -268,10 +280,6 @@ int registerToMM(char *MM_IP, char *MM_port, char map_nr, struct sockaddr_in* my
     }
     else {
         sock_addr_in6 = ipv6_parser(MM_IP, MM_port);
-        if ((sock = socket(AF_INET6, SOCK_STREAM, 0)) < 0) {
-            perror("MM socket, create");
-            return -1;
-        }
         if (connect(sock, (struct sockaddr *) &sock_addr_in6, sizeof(sock_addr_in6)) == -1) {
             perror("MM socket, connect");
             return -1;
@@ -303,12 +311,16 @@ int registerToMM(char *MM_IP, char *MM_port, char map_nr, struct sockaddr_in* my
                 return -1;
             } 
         }
-        close(sock);
+        if(close(sock) == -1) {
+	    perror("close");
+	}
         return 0;
     }
     // Something went wrong
     else {
-        close(sock);
+        if(close(sock) == -1) {
+	    perror("close");
+	}
         return -2;
     }
 }
