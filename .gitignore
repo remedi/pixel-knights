@@ -3,4 +3,6 @@
 *.swp
 server/server
 client/client
+tests/gamestate_test
+tests/network_test
 *.dSYM
