@@ -6,8 +6,8 @@ default: server
 debug: server.c gamestate.c thread.c main.c ../maps/maps.c ../address.c
 	$(CC) $(CFLAGS) -o server -g server.c gamestate.c thread.c main.c ../maps/maps.c ../address.c
 
-server: server.o gamestate.o thread.o main.o ../maps/maps.o ../address.o
-	$(CC) $(CFLAGS) -o server server.o gamestate.o thread.o main.o ../maps/maps.o ../address.o
+server: server.o gamestate.o thread.o main.o maps.o address.o
+	$(CC) $(CFLAGS) -o server server.o gamestate.o thread.o main.o maps.o address.o
 
 test: test.o gamestate.o
 	$(CC) $(CFLAGS) -o test test.o gamestate.o
@@ -24,14 +24,11 @@ gamestate.o: gamestate.c
 thread.o: thread.c
 	$(CC) $(CFLAGS) -c -o thread.o thread.c
 
-test.o: test.c
-	$(CC) $(CFLAGS) -c -o test.o test.c
-
-maps: ../maps/maps.c
-	$(CC) $(CFLAGS) $(LFLAGS) -c -o ../maps/maps.o ../maps/maps.c
+maps.o: ../maps/maps.c
+	$(CC) $(CFLAGS) $(LFLAGS) -c -o maps.o ../maps/maps.c
 
 address.o: ../address.c
-	$(CC) $(CFLAGS) $(LFLAGS) -c -o ../address.o ../address.c
+	$(CC) $(CFLAGS) $(LFLAGS) -c -o address.o ../address.c
 
 clean:
 	$(RM) server test *.o *.gch
