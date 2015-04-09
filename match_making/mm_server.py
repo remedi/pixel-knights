@@ -21,7 +21,11 @@ def pollServerList(serverList):
       continue
     sock.send("P")
     #Get the number of players as response
-    response = sock.recv(1024)
+    try:
+      response = sock.recv(1024)
+    except socket.timeout:
+      print "Socket timeout with: %s %s" % (addr, str(port))
+      continue
     if not response[0] == 'R':
       print "Server returned unexpected response"
       continue
