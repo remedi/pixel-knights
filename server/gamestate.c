@@ -34,6 +34,7 @@ int addObject(Gamestate* g, ID id, Coord c, int data, char sign, Type t, char* n
     object->sign = sign;
     object->data = data;
     object->type = t;
+    object->score = 0;
 
     // Allocate memory for the player name
     if (object->type == PLAYER) {

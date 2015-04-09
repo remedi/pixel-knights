@@ -31,6 +31,7 @@ struct gamestate_s {
     int data;
     Type type;
     char* name;
+    uint8_t score;
     Gamestate* next;
 };
 

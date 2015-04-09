@@ -48,6 +48,10 @@ int main(int argc, char *argv[]) {
     fd_set rdset, master;
     char* recvbuf = malloc(MAXDATASIZE * sizeof(char));
     char* sendbuf = malloc(MAXDATASIZE * sizeof(char));
+    //Announce buffer
+    char msg[40];
+    //Pointer to a single player
+    Gamestate *ptr;
     char ipstr[INET6_ADDRSTRLEN];
     ssize_t nbytes; 
     pthread_t gamestate_thread;
@@ -387,6 +391,8 @@ int main(int argc, char *argv[]) {
                         id = *data;
 
                         // Remove player and lock game state
+                        ptr = findObject(&game, id);
+			sprintf(msg, "C%s has left the game", ptr->name);
                         pthread_mutex_lock(&lock);
                         if (!removeObject(&game, id)) {
                             fprintf(stderr, "removeObject %02x: ID not found\n", id);
@@ -397,7 +403,9 @@ int main(int argc, char *argv[]) {
                         pthread_mutex_unlock(&lock);
 
                         // Send disconnect announcement
-                        status = sendAnnounce(&game, "CPlayer disconnected!", 21, 0); 
+                        //status = sendAnnounce(&game, "CPlayer disconnected!", 21, 0); 
+                        status = sendAnnounce(&game, msg, strlen(msg), 0); 
+                        memset(msg, '\0', 40);
                         if (status == -1) {
                             fprintf(stderr, "sendAnnounce: Invalid game state\n");
                         }

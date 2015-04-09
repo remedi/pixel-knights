@@ -22,6 +22,7 @@ int processAction(Gamestate* g, Mapdata *map_data, ID id, Action a) {
     Gamestate* game = g;
     int status = 0;
     ID collision = 0x00;
+    char msg[40];
 
     // If gamestate NULL
     if (!g)
@@ -128,6 +129,7 @@ int processAction(Gamestate* g, Mapdata *map_data, ID id, Action a) {
         if (g->type == PLAYER && collided->type == BULLET) {
             removeObject(game, collided->id);
             g->c = temp_coord;
+            g->score = 0;
         }
         // Player collided with another player
         else if (g->type == PLAYER && collided->type == PLAYER)
@@ -138,13 +140,15 @@ int processAction(Gamestate* g, Mapdata *map_data, ID id, Action a) {
         if (g->type == PLAYER && collided->type == POINT) {
             g->c = collided->c;
             removeObject(game, collided->id);
-            // TODO: make better announcements and calculate points
-            sendAnnounce(game, "CPlayer scored a point!", 23, 0);
-        }
+	    g->score++;
+	    sprintf(msg, "C%s has now %d points!", g->name, g->score);
+	    sendAnnounce(game, msg, strlen(msg), 0);
+	}
 
         // Bullet collided with a player
         else if (g->type == BULLET && collided->type == PLAYER) {
             collided->c = temp_coord;                 
+            collided->score = 0;
             removeObject(game, g->id);
         }
         // Bullet collided with a point
