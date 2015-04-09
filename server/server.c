@@ -240,8 +240,8 @@ int randomCoord(Gamestate *g, Mapdata *m, Coord *c) {
     //Two types of collisions to be avoided: collision with a element in gamestate, or with wall in mapdata
     int game_col = 0, map_col = 1;
     while(game_col || map_col) {
-        random.x = rand() % m->width-1;
-        random.y = rand() % m->height-1;
+        random.x = rand() % m->width;
+        random.y = rand() % m->height;
         map_col = checkWall(m, random);
         game_col = checkCollision(g, random);
     }

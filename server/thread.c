@@ -20,7 +20,7 @@
 #define BULLET_INTERVAL 1
 
 //Trees are spawned according to this value, smaller the faster: 
-#define TREE_INTERVAL 30
+#define TREE_INTERVAL 10
 
 // Send game state to all connected clients periodically
 void* sendGamestate(void* ctx) {
