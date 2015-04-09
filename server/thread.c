@@ -13,7 +13,7 @@
 #include "server.h"
 #include "thread.h"
 
-#define MAXDATASIZE 128
+#define MAXDATASIZE 1026
 #define G_INTERVAL_USEC 100000
 
 //Bullets are moved according to this value, smaller the faster: 
