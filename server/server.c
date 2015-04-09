@@ -75,7 +75,7 @@ int processAction(Gamestate* g, Mapdata *map_data, ID id, Action a) {
             temp_coord.x++;
             if (!checkWall(map_data, temp_coord)) {
                 if (!checkCollision(game, temp_coord)) {
-                    if(!addObject(game, createID(g), temp_coord, RIGHT, '*', BULLET))
+                    if(!addObject(game, createID(g), temp_coord, RIGHT, '*', BULLET, NULL))
                         break;
                 }
             }
@@ -85,7 +85,7 @@ int processAction(Gamestate* g, Mapdata *map_data, ID id, Action a) {
             temp_coord.x--;
             if (!checkWall(map_data, temp_coord)) {
                 if (!checkCollision(game, temp_coord)) {
-                    if(!addObject(game, createID(g), temp_coord, LEFT, '*', BULLET))
+                    if(!addObject(game, createID(g), temp_coord, LEFT, '*', BULLET, NULL))
                         break;
                 }
             }
@@ -95,7 +95,7 @@ int processAction(Gamestate* g, Mapdata *map_data, ID id, Action a) {
             temp_coord.y--;
             if (!checkWall(map_data, temp_coord)) {
                 if (!checkCollision(game, temp_coord)) {
-                    if(!addObject(game, createID(g), temp_coord, UP, '*', BULLET))
+                    if(!addObject(game, createID(g), temp_coord, UP, '*', BULLET, NULL))
                         break;
                 }
             }
@@ -105,7 +105,7 @@ int processAction(Gamestate* g, Mapdata *map_data, ID id, Action a) {
             temp_coord.y++;
             if (!checkWall(map_data, temp_coord)) {
                 if (!checkCollision(game, temp_coord)) {
-                    if(!addObject(game, createID(g), temp_coord, DOWN, '*', BULLET))
+                    if(!addObject(game, createID(g), temp_coord, DOWN, '*', BULLET, NULL))
                         break;
                 }
             }
@@ -203,7 +203,7 @@ int spawnScorePoint(Gamestate* g, Mapdata* m) {
     }
 
     // Add point object
-    if ((status = addObject(g, createID(g), random, -1, '$', POINT))) {
+    if ((status = addObject(g, createID(g), random, -1, '$', POINT, NULL))) {
         return status;
     }
 

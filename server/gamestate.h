@@ -9,7 +9,7 @@
 /* Functions that add to or modify the list:*/
 
 // Adds player to the gamestate linked-list
-int addObject(Gamestate*, ID, Coord, int, char, Type);
+int addObject(Gamestate*, ID, Coord, int, char, Type, char*);
 
 // Changes the sign of the player
 int changePlayerSign(Gamestate*, ID, char);

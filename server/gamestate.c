@@ -13,7 +13,7 @@
 
 
 // Adds object to the gamestate linked-list
-int addObject(Gamestate* g, ID id, Coord c, int data, char sign, Type t) {
+int addObject(Gamestate* g, ID id, Coord c, int data, char sign, Type t, char* name) {
 
     // If gamestate NULL
     if (!g)
@@ -27,13 +27,25 @@ int addObject(Gamestate* g, ID id, Coord c, int data, char sign, Type t) {
     while (g->next != NULL)
         g = g->next;
 
-    // Allocate memory for player and assign values
+    // Allocate memory for object and assign values
     Gamestate* object = malloc(sizeof(Gamestate));
     object->id = id;
     object->c = c;
     object->sign = sign;
     object->data = data;
     object->type = t;
+
+    // Allocate memory for the player name
+    if (object->type == PLAYER) {
+        char* n = malloc(sizeof(char) * (strlen(name)+1));
+        strcpy(n, name);
+        n[strlen(name)] = '\0';
+        object->name = n;
+    }
+    else
+        object->name = NULL;
+
+    // Add the object to the linked-list
     object->next = NULL;
     g->next = object;
 
@@ -139,6 +151,9 @@ Gamestate* removeObject(Gamestate* g, ID id) {
         // ID found
         if (g->next->id == id) {
             Gamestate* tmp = g->next->next;
+            // If Object has a name
+            if (g->next->name)
+                free(g->next->name);
             free(g->next);
             g->next = tmp;
             return g;
@@ -165,7 +180,10 @@ int printObjects(Gamestate* g) {
     g = g->next;
     printf("Current objects:\n");
     while (g != NULL) {
-        printf("%02x: (%hhu,%hhu) - %c @ %d\n", g->id, g->c.x, g->c.y, g->sign, g->data);
+        if (g->name)
+            printf("%02x: (%hhu,%hhu) - %c @ %s\n", g->id, g->c.x, g->c.y, g->sign, g->name);
+        else
+            printf("%02x: (%hhu,%hhu) - %c\n", g->id, g->c.x, g->c.y, g->sign);
         g = g->next;
     }
     printf("\n");
@@ -228,6 +246,8 @@ void freeGamestate(Gamestate* g) {
     Gamestate* tmp; 
     while (g) {
         tmp = g->next;
+        if (g->name)
+            free(g->name);
         free(g);
         g = tmp;
     }

@@ -321,7 +321,7 @@ int main(int argc, char *argv[]) {
                         // Generate random coordinates to c and add player
                         pthread_mutex_lock(&lock);
                         randomCoord(&game, &map, &c);
-                        status = addObject(&game, id, c, i, recvbuf[1], PLAYER);
+                        status = addObject(&game, id, c, i, recvbuf[1], PLAYER, recvbuf+1);
                         pthread_mutex_unlock(&lock);
 
                         if (status == -1) {

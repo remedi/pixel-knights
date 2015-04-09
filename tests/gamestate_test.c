@@ -17,24 +17,23 @@ int main(void) {
     c.x = 2;
     c.y = 3;
 
-    addObject(&game, 0x01, c, 0, '#', PLAYER);
+    addObject(&game, 0x01, c, 0, '#', PLAYER, "morpheus");
     printObjects(&game);
 
-    addObject(&game, 0x15, c, 0, 'a', PLAYER);
-    addObject(&game, 0xFF, c, 0, 'b', BULLET);
+    addObject(&game, 0x15, c, 0, 'a', PLAYER, "jabbathehu");
+    addObject(&game, 0xFF, c, 0, 'b', BULLET, NULL);
 
     changePlayerSign(&game, 0x01, '/');
     printObjects(&game);
 
     c.x = 25;
 
-    addObject(&game, 0x55, c, 0, '$', POINT);
+    addObject(&game, 0x55, c, 0, '$', POINT, NULL);
     printObjects(&game);
 
     removeObject(&game, 0x01);
     printObjects(&game);
 
-    removeObject(&game, 0x01);
     removeObject(&game, 0x15);
     removeObject(&game, 0xFF);
     printObjects(&game);

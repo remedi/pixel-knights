@@ -30,6 +30,7 @@ struct gamestate_s {
     char sign;
     int data;
     Type type;
+    char* name;
     Gamestate* next;
 };
 
