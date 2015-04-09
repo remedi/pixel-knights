@@ -146,8 +146,9 @@ int processAction(Gamestate* g, Mapdata *map_data, ID id, Action a) {
         if (g->type == PLAYER && collided->type == POINT) {
             g->c = collided->c;
             removeObject(game, collided->id);
+            g->score++;
             // TODO: calculate points
-            sprintf(sendbuf, "C%s scored a point!", g->name);
+            sprintf(sendbuf, "C%s has now %d points!", g->name, g->score);
             sendAnnounce(game, sendbuf, strlen(sendbuf), 0);
         }
 
@@ -157,6 +158,7 @@ int processAction(Gamestate* g, Mapdata *map_data, ID id, Action a) {
             sprintf(sendbuf, "C%s was killed!", collided->name);
             sendAnnounce(game, sendbuf, strlen(sendbuf), 0);
             removeObject(game, g->id);
+            collided->score = 0;
         }
         // Bullet collided with a point
         else if (g->type == BULLET && collided->type == POINT)
