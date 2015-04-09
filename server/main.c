@@ -386,18 +386,18 @@ int main(int argc, char *argv[]) {
                         data = (uint8_t*) (recvbuf + 1);
                         id = *data;
 
-                        // Remove player and lock game state
+                        // Lock game state, remove player and send announcement
                         pthread_mutex_lock(&lock);
+                        sprintf(sendbuf, "C%s disconnected!\n", findObject(&game, id)->name);
                         if (!removeObject(&game, id)) {
                             fprintf(stderr, "removeObject %02x: ID not found\n", id);
                             continue;
                         }
                         else
-                            printf("Player with id: %02x disconnected!\n", id); 
+                            printf("Player with id %02x disconnected!\n", id);
                         pthread_mutex_unlock(&lock);
 
-                        // Send disconnect announcement
-                        status = sendAnnounce(&game, "CPlayer disconnected!", 21, 0); 
+                        status = sendAnnounce(&game, sendbuf, strlen(sendbuf), 0);
                         if (status == -1) {
                             fprintf(stderr, "sendAnnounce: Invalid game state\n");
                         }

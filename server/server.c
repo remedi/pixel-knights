@@ -16,12 +16,15 @@
 #include "server.h"
 #include "gamestate.h"
 
+#define MAXLINE 128
+
 // This function performs the action that player has requested: Move player or shoot a bullet.
 int processAction(Gamestate* g, Mapdata *map_data, ID id, Action a) {
     Coord temp_coord;
     Gamestate* game = g;
     int status = 0;
     ID collision = 0x00;
+    char sendbuf[MAXLINE];
 
     // If gamestate NULL
     if (!g)
@@ -118,6 +121,8 @@ int processAction(Gamestate* g, Mapdata *map_data, ID id, Action a) {
     // Object collided with players or bullets
     if (collision > 0) {
 
+        memset(sendbuf, 0, MAXLINE);
+
         // Find the object that we collided with
         Gamestate* collided = findObject(game, collision);
 
@@ -127,6 +132,8 @@ int processAction(Gamestate* g, Mapdata *map_data, ID id, Action a) {
         // Player collided with a bullet
         if (g->type == PLAYER && collided->type == BULLET) {
             removeObject(game, collided->id);
+            sprintf(sendbuf, "C%s was killed!", g->name);
+            sendAnnounce(game, sendbuf, strlen(sendbuf), 0);
             g->c = temp_coord;
         }
         // Player collided with another player
@@ -138,13 +145,16 @@ int processAction(Gamestate* g, Mapdata *map_data, ID id, Action a) {
         if (g->type == PLAYER && collided->type == POINT) {
             g->c = collided->c;
             removeObject(game, collided->id);
-            // TODO: make better announcements and calculate points
-            sendAnnounce(game, "CPlayer scored a point!", 23, 0);
+            // TODO: calculate points
+            sprintf(sendbuf, "C%s scored a point!", g->name);
+            sendAnnounce(game, sendbuf, strlen(sendbuf), 0);
         }
 
         // Bullet collided with a player
         else if (g->type == BULLET && collided->type == PLAYER) {
-            collided->c = temp_coord;                 
+            collided->c = temp_coord;
+            sprintf(sendbuf, "C%s was killed!", collided->name);
+            sendAnnounce(game, sendbuf, strlen(sendbuf), 0);
             removeObject(game, g->id);
         }
         // Bullet collided with a point
@@ -229,8 +239,8 @@ int randomCoord(Gamestate *g, Mapdata *m, Coord *c) {
     //Two types of collisions to be avoided: collision with a element in gamestate, or with wall in mapdata
     int game_col = 0, map_col = 1;
     while(game_col || map_col) {
-        random.x = rand() % m->width;
-        random.y = rand() % m->height;
+        random.x = rand() % m->width-1;
+        random.y = rand() % m->height-1;
         map_col = checkWall(m, random);
         game_col = checkCollision(g, random);
     }
