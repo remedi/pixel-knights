@@ -422,7 +422,7 @@ int main(int argc, char *argv[]) {
                             continue;
                         }
                         else
-                            printf("Player with id %02x disconnected!\n", id);
+                            printf("Player with id %02x disconnected!", id);
                         pthread_mutex_unlock(&lock);
 
                         status = sendAnnounce(&game, sendbuf, strlen(sendbuf), 0);
