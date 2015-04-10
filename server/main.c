@@ -46,7 +46,7 @@ int main(int argc, char *argv[]) {
     struct sockaddr_in6 my_IP6;
     socklen_t socklen = sizeof(struct sockaddr);
     int status, listenfd, new_fd, fdmax, yes = 1;
-    //int fd_limit, pid, fd;
+    int fd_limit, pid, fd;
     char map_nr;
     fd_set rdset, master;
     char* recvbuf = malloc(MAXDATASIZE * sizeof(char));
@@ -92,6 +92,30 @@ int main(int argc, char *argv[]) {
         printf("Usage: %s [<map_nr>] [[<mm_ip>]] [[<mm_port>]]\n", argv[0]);
         exit(EXIT_SUCCESS);
     }
+
+    //Daemon setup
+    fd_limit = sysconf(_SC_OPEN_MAX);
+    pid = fork();
+    if(pid == -1) {
+	perror("fork");
+	exit_clean = 1;
+    }
+    else if(pid) {
+	exit(0);
+    }
+    setsid();
+    pid = fork();
+    if(pid) {
+	exit(0);
+    }
+    fd = 0;
+    while(fd < fd_limit) {
+	close(fd);
+	fd++;
+    }
+    open("/dev/null", O_RDWR);
+    dup(0);
+    dup(0);
 
     // Create map
     if (createMap(&map, map_nr) != 0) {
@@ -213,30 +237,6 @@ int main(int argc, char *argv[]) {
         perror("pthread_create error");
         exit(EXIT_FAILURE);
     }
-
-    //Daemon setup
-    /*fd_limit = sysconf(_SC_OPEN_MAX);
-    pid = fork();
-    if(pid == -1) {
-	perror("fork");
-	exit_clean = 1;
-    }
-    else if(pid) {
-	exit(0);
-    }
-    setsid();
-    pid = fork();
-    if(pid) {
-	exit(0);
-    }
-    fd = 0;
-    while(fd < fd_limit) {
-	close(fd);
-	fd++;
-    }
-    open("/dev/null", O_RDWR);
-    dup(0);
-    dup(0);*/
 
     while(!exit_clean) {
 
