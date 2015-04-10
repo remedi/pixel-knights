@@ -416,13 +416,13 @@ int main(int argc, char *argv[]) {
 
                         // Lock game state, remove player and send announcement
                         pthread_mutex_lock(&lock);
-                        sprintf(sendbuf, "C%s disconnected!\n", findObject(&game, id)->name);
+                        sprintf(sendbuf, "C%s disconnected!", findObject(&game, id)->name);
                         if (!removeObject(&game, id)) {
                             fprintf(stderr, "removeObject %02x: ID not found\n", id);
                             continue;
                         }
                         else
-                            printf("Player with id %02x disconnected!", id);
+                            printf("Player with id %02x disconnected!\n", id);
                         pthread_mutex_unlock(&lock);
 
                         status = sendAnnounce(&game, sendbuf, strlen(sendbuf), 0);
