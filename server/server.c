@@ -163,6 +163,11 @@ int processAction(Gamestate* g, Mapdata *map_data, ID id, Action a) {
         // Bullet collided with a point
         else if (g->type == BULLET && collided->type == POINT)
             removeObject(game, g->id);
+        // Bullet collided with a bullet
+        else if (g->type == BULLET && collided->type == BULLET) {
+            removeObject(game, g->id);
+            removeObject(game, collided->id);
+        }
 
     }
     // Object collided with a wall
