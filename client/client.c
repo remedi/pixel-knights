@@ -168,7 +168,7 @@ int main(int argc, char *argv[]) {
     char my_name[10];
     memset(my_name, 0, 10);
     struct termios save_term, conf_term;
-    int sock = 0, IP4 = 1, domain, exit_msg_needed = 0;
+    int sock = 0, IP4 = 1, domain, exit_msg_needed = 0, flags;
     socklen_t sock_len;
     struct sigaction sig_hand;
 
@@ -365,7 +365,12 @@ int main(int argc, char *argv[]) {
     }
     
     //Clean-up:
+
+    //Exit message flag
     if(exit_msg_needed) {
+	//Make write non-blocking: We might be in a signal handler
+        flags = fcntl(sock, F_GETFL, 0);
+        fcntl(sock, F_SETFL, (flags | O_NONBLOCK));
 	buffer[0] = 'Q';
 	memcpy(buffer+1, &my_id, 1);
 	write(sock, buffer, 2);
