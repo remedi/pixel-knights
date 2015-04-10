@@ -9,11 +9,16 @@
 
 #include "maps.h"
 
+//In unix we need to skip one char in line change. In windows there r two characters
+#define UNIX_MAP 1
+#define WIN_MAP 2
+
 //Allocate memory for map. Initialize memory as map tiles. Return two-dimensional character array as the map.
 int createMap(Mapdata *map_data, int map_nr) {
     int width = 0, height = 0;
     int fd = 0, i;
     char *map_path;
+    int os = 1;
 
     fd = open("../maps/square.map", O_RDONLY);
     if (fd != -1)
@@ -21,22 +26,32 @@ int createMap(Mapdata *map_data, int map_nr) {
 
     switch(map_nr) {
         case 1:
+	    os = UNIX_MAP;
             if (fd == -1)
                 map_path = "maps/square.map";
             else 
                 map_path = "../maps/square.map";
             break;
         case 2:
+	    os = UNIX_MAP;
             if (fd == -1)
                 map_path = "maps/split.map";
             else
                 map_path = "../maps/split.map";
             break;
         case 3:
+	    os = UNIX_MAP;
             if (fd == -1)
                 map_path = "maps/hall.map";
             else
                 map_path = "../maps/hall.map";
+            break;
+        case 4:
+	    os = WIN_MAP;
+            if (fd == -1)
+                map_path = "maps/sniperArea.map";
+            else
+                map_path = "../maps/sniperArea.map";
             break;
         default:
             if (fd == -1)
@@ -56,7 +71,7 @@ int createMap(Mapdata *map_data, int map_nr) {
     read(fd, &height, 1);
 
     //Skip the newline
-    lseek(fd, 1, SEEK_CUR);
+    lseek(fd, os, SEEK_CUR);
 
     // Allocate memory for map
     char **rows = malloc(sizeof(char *) * height);
@@ -81,7 +96,7 @@ int createMap(Mapdata *map_data, int map_nr) {
     for(i = 0; i<height; i++) {
         read(fd, rows[i], width);
         //Skip the newline
-        lseek(fd, 1, SEEK_CUR);
+        lseek(fd, os, SEEK_CUR);
     }
 
 
