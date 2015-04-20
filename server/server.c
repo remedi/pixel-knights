@@ -174,14 +174,16 @@ int processAction(Gamestate* g, Mapdata *map_data, ID id, Action a) {
     else if (status > 0) {
         if (g->type == BULLET) {
             removeObject(game, g->id);
-            return 0;
+            //Return over 0 if list has changed
+            return status;
         }
         // Illegal move for player
         return -3;
     }
     
     // No collision or collision solved
-    return 0;
+    //Return over 0 if list has changed
+    return collision;
 }
 
 // Move every bullet once to direction that bullet is heading.
@@ -189,15 +191,21 @@ int processAction(Gamestate* g, Mapdata *map_data, ID id, Action a) {
 int updateBullets(Gamestate* g, Mapdata *map_data) {
 
     Gamestate* game = g;
+    Gamestate* tmp;
 
     // If gamestate NULL
     if (!g)
         return -1;
 
     while (g != NULL) {
+	tmp = g->next;
         if (g->type == BULLET) {
             // Bullets move as normal players
-            processAction(game, map_data, g->id, g->data);
+            if (processAction(game, map_data, g->id, g->data) > 0) {
+		//If function returned over 0, list was changed
+		g = tmp;
+		continue;
+	    }
         }
         g = g->next;
     }

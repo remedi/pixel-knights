@@ -46,7 +46,7 @@ int main(int argc, char *argv[]) {
     struct sockaddr_in6 my_IP6;
     socklen_t socklen = sizeof(struct sockaddr);
     int status, listenfd, new_fd, fdmax, yes = 1;
-    int fd_limit, pid, fd;
+    //int fd_limit, pid, fd;
     char map_nr;
     fd_set rdset, master;
     char* recvbuf = malloc(MAXDATASIZE * sizeof(char));
@@ -94,7 +94,7 @@ int main(int argc, char *argv[]) {
     }
 
     //Daemon setup
-    fd_limit = sysconf(_SC_OPEN_MAX);
+    /*fd_limit = sysconf(_SC_OPEN_MAX);
     pid = fork();
     if(pid == -1) {
 	perror("fork");
@@ -115,7 +115,7 @@ int main(int argc, char *argv[]) {
     }
     open("/dev/null", O_RDWR);
     dup(0);
-    dup(0);
+    dup(0);*/
 
     // Create map
     if (createMap(&map, map_nr) != 0) {
