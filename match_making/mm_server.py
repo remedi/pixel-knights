@@ -71,7 +71,7 @@ def getOwnAddr():
     #Retrieve own IP
     my_IP = ownAddr.getsockname()[0]
     ownAddr.close()
-    print "Retrieved own IP: ", my_IP
+    print "Retrieved own IP:", my_IP
   except socket.timeout:
     print "No connection, creating localserver"
     my_IP = 'localhost'
@@ -97,7 +97,7 @@ def main():
     except socket.error:
       port += 1
 
-  print "Listening for connection on: ", clientSocket.getsockname()
+  print "Listening for connection on: %s %d " % (clientSocket.getsockname()[0], clientSocket.getsockname()[1])
   #print "Redirection message: ", serverAddr
   
   clientSocket.listen(1)
@@ -107,13 +107,13 @@ def main():
     globalServerList = pollServerList(globalServerList)
     recv = client.recv(1024)
     if recv[0] == 'H':
-      print "Client connected from: ", addr
+      print "Client connected from: %s %d " % (addr[0], addr[1])
       print "Responding with serverlist of %d servers" % len(globalServerList)
       sendMe = createServerList(globalServerList)
       sendMe = "L%x " % (len(globalServerList)) + sendMe
       client.send(sendMe);
     elif recv[0] == 'S':
-      print "Map server connected: ", addr
+      print "Map server connected from: %s %d " % (addr[0], addr[1])
       client.send("O");
       # Close this connection as soon as possible:
       client.close()
