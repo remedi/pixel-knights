@@ -28,26 +28,29 @@ int isIpv4(char *buf) {
 	return 0;
 }
 
-//Parse ip and port from character strings to a struct sockaddr_in6.
-struct sockaddr_in6 ipv6_parser(char *ip, char *port) {
-  struct sockaddr_in6 temp;
-  if(inet_pton(AF_INET6, ip, &temp.sin6_addr) < 1) {
-    perror("ipv6_parser, inet_pton");
-    exit(-1);
-  }
-  temp.sin6_port = ntohs(strtol(port, NULL, 10));
-  temp.sin6_family = AF_INET6;
-  return temp;
-}
-
-//Parse ip and port from character strings to a struct sockaddr_in.
-struct sockaddr_in ipv4_parser(char *ip, char *port) {
-    struct sockaddr_in temp; 
-    memset(&temp, 0, sizeof(struct sockaddr_in));
-    if(inet_pton(AF_INET, ip, &temp.sin_addr) < 1) {
-        perror("ipv4_parser, inet_pton");
+//Parse ip and port from character strings to a type: struct sockaddr_storage
+struct sockaddr_storage ip_parser(char *ip, char *port) {
+    struct sockaddr_in6 temp6;
+    struct sockaddr_in temp4; 
+    struct sockaddr_storage ret_addr;
+    memset(&temp4, 0, sizeof(struct sockaddr_in));
+    memset(&temp6, 0, sizeof(struct sockaddr_in6));
+    memset(&ret_addr, 0, sizeof(struct sockaddr_storage));
+    if(isIpv4(ip)) {
+	if(inet_pton(AF_INET, ip, &temp4.sin_addr) < 1) {
+	    perror("inet_pton");
+	}
+	temp4.sin_port = ntohs(strtol(port, NULL, 10));
+	temp4.sin_family = AF_INET;
+	memcpy(&ret_addr, &temp4, sizeof(struct sockaddr_in));
     }
-    temp.sin_port = ntohs(strtol(port, NULL, 10));
-    temp.sin_family = AF_INET;
-    return temp;
+    else {
+	if(inet_pton(AF_INET6, ip, &temp6.sin6_addr) < 1) {
+	    perror("inet_pton");
+	}
+	temp6.sin6_port = ntohs(strtol(port, NULL, 10));
+	temp6.sin6_family = AF_INET6;
+	memcpy(&ret_addr, &temp6, sizeof(struct sockaddr_in6));
+    }
+    return ret_addr;
 }

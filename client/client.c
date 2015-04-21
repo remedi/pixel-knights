@@ -38,6 +38,9 @@ int serverListParser(char *buf) {
     int server_count = buf[1] - '0';
     int i = 0, user_input = -1;
     char **server_array = malloc(sizeof(char*) * server_count);
+    char *temp_server = malloc(BUFLEN);
+
+    memset(temp_server, 0, BUFLEN);
 
     // Parse the server list
     server_array[i] = strtok(buf+3, "\200");
@@ -55,7 +58,9 @@ int serverListParser(char *buf) {
         user_input = getchar() - '0';
     }
 
-    strncpy(buf, server_array[user_input], strlen(server_array[user_input]));
+    strncpy(temp_server, server_array[user_input], strlen(server_array[user_input]));
+    strncpy(buf, temp_server, strlen(temp_server));
+    free(temp_server);
 
     free(server_array);
     return 0;
@@ -157,9 +162,7 @@ int changeTermSettings(struct termios new_settings) {
 
 int main(int argc, char *argv[]) {
     char input_char = 1;
-    struct sockaddr_in sock_addr_in;
-    struct sockaddr_in6 sock_addr_in6;
-    struct sockaddr *addr_ptr;
+    struct sockaddr_storage addr;
     char *buffer = malloc(BUFLEN);
     char *chat_buffer = malloc(BUFLEN);
     pthread_t thread;
@@ -169,7 +172,7 @@ int main(int argc, char *argv[]) {
     memset(my_name, 0, 10);
     struct termios save_term, conf_term;
     int sock = 0, IP4 = 1, domain, exit_msg_needed = 0, flags;
-    socklen_t sock_len;
+    socklen_t sock_len = sizeof(struct sockaddr_storage);
     struct sigaction sig_hand;
 
     // Signal handler
@@ -178,7 +181,6 @@ int main(int argc, char *argv[]) {
     sig_hand.sa_flags = 0;
     sigaction(SIGINT, &sig_hand, NULL);
     sigaction(SIGPIPE, &sig_hand, NULL);
-
     if (argc != 3 && argc != 2) {
         printf("Usage: client <ipv4> <port>\n");
 	free(buffer);
@@ -188,21 +190,15 @@ int main(int argc, char *argv[]) {
     if (argc == 3) {
 	IP4 = isIpv4(argv[1]);
 	if(IP4) {
-	    sock_addr_in = ipv4_parser(argv[1], argv[2]);
-	    sock_len = sizeof(sock_addr_in);
-	    addr_ptr = (struct sockaddr *) &sock_addr_in;
 	    domain = AF_INET;
 	}
 	else {
-	    sock_addr_in6 = ipv6_parser(argv[1], argv[2]);
-	    sock_len = sizeof(sock_addr_in6);
-	    addr_ptr = (struct sockaddr *) &sock_addr_in6;
 	    domain = AF_INET6;
 	}
+	addr = ip_parser(argv[1], argv[2]);
     }
     else {
-        sock_addr_in = ipv4_parser("localhost", argv[1]);
-	addr_ptr = (struct sockaddr *) &sock_addr_in;
+        addr = ip_parser("localhost", argv[1]);
     }
 
     printf("Joining pixel knights multiplayer game...\n");
@@ -236,13 +232,13 @@ int main(int argc, char *argv[]) {
     //Setup connection. There maybe multiple loops if we first connect to a MM server
     while(!exit_clean) {
 	if ((sock = socket(domain, SOCK_STREAM, 0)) == 0) {
-	    perror("socket, IPv6");
+	    perror("socket");
 	    exit_clean = 1;
 	}
 
         // Connect to a server. It can be MM server or map server
         printf("main: Connecting to server..\n");
-        if (connect(sock, addr_ptr, sock_len) == -1) {
+        if (connect(sock, (struct sockaddr *) &addr, sock_len) == -1) {
             perror("main, connect");
             printf("Exiting since connection failed\n");
             exit_clean = 1;
@@ -286,17 +282,12 @@ int main(int argc, char *argv[]) {
 		port = strtok(NULL, " ");
 		IP4 = isIpv4(ip);
 		if(IP4) {
-		    sock_addr_in = ipv4_parser(ip, port);
-		    sock_len = sizeof(sock_addr_in);
-		    addr_ptr = (struct sockaddr *) &sock_addr_in;
 		    domain = AF_INET;
 		}
 		else {
-		    sock_addr_in6 = ipv6_parser(ip, port);
-		    sock_len = sizeof(sock_addr_in6);
-		    addr_ptr = (struct sockaddr *) &sock_addr_in6;
 		    domain = AF_INET6;
 		}
+		addr = ip_parser(ip, port);
             }
             else {
                 printf("Unexpected message from server: %s\n", buffer);

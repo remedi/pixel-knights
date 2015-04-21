@@ -8,9 +8,9 @@
 int isIpv4(char *);
 
 //Parse ip and port from character strings to a struct sockaddr_in.
-struct sockaddr_in ipv4_parser(char *, char *);
+struct sockaddr_storage ipv4_parser(char *, char *);
 
 //Parse ip and port from character strings to a struct sockaddr_in6.
-struct sockaddr_in6 ipv6_parser(char *, char *);
+struct sockaddr_storage ip_parser(char *, char *);
 
 #endif

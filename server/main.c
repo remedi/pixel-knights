@@ -42,8 +42,8 @@ int main(int argc, char *argv[]) {
     // Declare variables
     struct addrinfo* results, hints, *i;
     struct sockaddr_storage their_addr;
-    struct sockaddr_in my_IP;
-    struct sockaddr_in6 my_IP6;
+    struct sockaddr_storage my_IP;
+    struct sockaddr *print_IP;
     socklen_t socklen = sizeof(struct sockaddr);
     int status, listenfd, new_fd, fdmax, yes = 1;
     //int fd_limit, pid, fd;
@@ -124,7 +124,7 @@ int main(int argc, char *argv[]) {
     }
     // Announce this server to MM server, if user has given map_nr, ip and port. 
     if (argc == 4) {
-        status = registerToMM(argv[2], argv[3], map_nr, &my_IP, &my_IP6);
+        status = registerToMM(argv[2], argv[3], map_nr, &my_IP);
         if (status == -1) {
             fprintf(stderr, "Could not connect to MM server\n");
             exit(EXIT_FAILURE);
@@ -151,27 +151,13 @@ int main(int argc, char *argv[]) {
             perror("setsockopt");
             exit(EXIT_FAILURE);
         }
-	if(IP4) {
-	    if (bind(listenfd, (struct sockaddr *) &my_IP, sizeof(struct sockaddr_in)) == -1) {
-		perror("bind");
-		exit(EXIT_FAILURE);
-	    }
+	if (bind(listenfd, (struct sockaddr *) &my_IP, sizeof(struct sockaddr_storage)) == -1) {
+	    perror("bind");
+	    exit(EXIT_FAILURE);
 	}
-	else {
-	    if (bind(listenfd, (struct sockaddr *) &my_IP6, sizeof(struct sockaddr_in6)) == -1) {
-		perror("bind");
-		exit(EXIT_FAILURE);
-	    }
-	}
-
-	if(IP4) {
-	    inet_ntop(AF_INET, (void *) &my_IP.sin_addr, ipstr, INET_ADDRSTRLEN);
-	    printf("Server Port: %d\n", ntohs(my_IP.sin_port));
-	}
-	else {
-	    inet_ntop(AF_INET6, (void *) &my_IP6.sin6_addr, ipstr, INET6_ADDRSTRLEN);
-	    printf("Server Port: %d\n", ntohs(my_IP6.sin6_port));
-	}
+	print_IP = (struct sockaddr *) &my_IP;
+	inet_ntop(print_IP->sa_family, print_IP->sa_data, ipstr, INET6_ADDRSTRLEN);
+	//printf("Server Port: %d\n", ntohs((uint16_t) print_IP->sa_data));
     }
     // Create local socket
     else {

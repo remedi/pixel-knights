@@ -132,7 +132,7 @@ int processAction(Gamestate* g, Mapdata *map_data, ID id, Action a) {
         // Player collided with a bullet
         if (g->type == PLAYER && collided->type == BULLET) {
             removeObject(game, collided->id);
-            sprintf(sendbuf, "C%s was killed!", g->name);
+            sprintf(sendbuf, "C%s ran into bullet!", g->name);
             sendAnnounce(game, sendbuf, strlen(sendbuf), 0);
             g->c = temp_coord;
             g->score = 0;
@@ -143,7 +143,7 @@ int processAction(Gamestate* g, Mapdata *map_data, ID id, Action a) {
             return -3;
 
         // Player collided with a score point 
-        if (g->type == PLAYER && collided->type == POINT) {
+        else if (g->type == PLAYER && collided->type == POINT) {
             g->c = collided->c;
             removeObject(game, collided->id);
             g->score++;
@@ -155,7 +155,7 @@ int processAction(Gamestate* g, Mapdata *map_data, ID id, Action a) {
         // Bullet collided with a player
         else if (g->type == BULLET && collided->type == PLAYER) {
             collided->c = temp_coord;
-            sprintf(sendbuf, "C%s was killed!", collided->name);
+            sprintf(sendbuf, "C%s was hit by a bullet!", collided->name);
             sendAnnounce(game, sendbuf, strlen(sendbuf), 0);
             removeObject(game, g->id);
             collided->score = 0;
@@ -266,13 +266,14 @@ int randomCoord(Gamestate *g, Mapdata *m, Coord *c) {
 }
 
 // Announce map server to matchmaking server
-int registerToMM(char *MM_IP, char *MM_port, char map_nr, struct sockaddr_in* my_IP, struct sockaddr_in6* my_IP6) {
+int registerToMM(char *MM_IP, char *MM_port, char map_nr, struct sockaddr_storage* my_IP) {
     int sock;
-    struct sockaddr_in sock_addr_in;
-    struct sockaddr_in6 sock_addr_in6;
+    //struct sockaddr_in sock_addr_in;
+    struct sockaddr_storage addr;
+    //struct sockaddr_storage sock_addr_in;
+    //struct sockaddr_storage sock_addr_in6;
     char message[2];
-    socklen_t my_IP_len = sizeof(struct sockaddr_in);
-    socklen_t my_IP6_len = sizeof(struct sockaddr_in6);
+    socklen_t my_IP_len = sizeof(struct sockaddr_storage);
     int IP4, domain, so_reuseaddr = 1;
 
     // The message sent to MM server contains 'S' + map number
@@ -280,6 +281,9 @@ int registerToMM(char *MM_IP, char *MM_port, char map_nr, struct sockaddr_in* my
     message[1] = map_nr;
 
     IP4 = isIpv4(MM_IP);
+
+    //memset(&sock_addr_in6, 0, sizeof(struct sockaddr_storage));
+    memset(&addr, 0, sizeof(struct sockaddr_storage));
 
     // Create socket of corred domain. Give it linger option because we will use this port again
     if(IP4) {
@@ -297,19 +301,10 @@ int registerToMM(char *MM_IP, char *MM_port, char map_nr, struct sockaddr_in* my
 	exit(EXIT_FAILURE);
     }
 
-    if(IP4) {
-        sock_addr_in = ipv4_parser(MM_IP, MM_port);
-        if (connect(sock, (struct sockaddr *) &sock_addr_in, sizeof(sock_addr_in)) == -1) {
-            perror("MM socket, connect");
-            return -1;
-        }
-    }
-    else {
-        sock_addr_in6 = ipv6_parser(MM_IP, MM_port);
-        if (connect(sock, (struct sockaddr *) &sock_addr_in6, sizeof(sock_addr_in6)) == -1) {
-            perror("MM socket, connect");
-            return -1;
-        }
+    addr = ip_parser(MM_IP, MM_port);
+    if (connect(sock, (struct sockaddr *) &addr, sizeof(addr)) == -1) {
+	perror("MM socket, connect");
+	return -1;
     }
 
     // Send server information
@@ -325,18 +320,22 @@ int registerToMM(char *MM_IP, char *MM_port, char map_nr, struct sockaddr_in* my
 
     // OK reply from MM
     if (message[0] == 'O') {
-        if(IP4) {
-            if (getsockname(sock, (struct sockaddr *) my_IP, &my_IP_len) == -1) {
-                perror("getsockname");
-                return -1;
-            } 
-        }
-        else {
-            if (getsockname(sock, (struct sockaddr *) my_IP6, &my_IP6_len) == -1) {
-                perror("getsockname");
-                return -1;
-            } 
-        }
+	if (getsockname(sock, (struct sockaddr *) my_IP, &my_IP_len) == -1) {
+	    perror("getsockname");
+	    return -1;
+	} 
+	/*if(IP4) {
+	  if (getsockname(sock, (struct sockaddr *) my_IP, &my_IP_len) == -1) {
+	  perror("getsockname");
+	  return -1;
+	  } 
+	  }
+	  else {
+	  if (getsockname(sock, (struct sockaddr *) my_IP6, &my_IP6_len) == -1) {
+	  perror("getsockname");
+	  return -1;
+	  } 
+	  }*/
         if(close(sock) == -1) {
 	    perror("close");
 	}
