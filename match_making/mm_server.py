@@ -2,8 +2,15 @@
 
 import socket
 import signal
+import optparse
 
 globalServerList = []
+
+def createCLIParser():
+  parser = optparse.OptionParser()
+  parser.add_option("-6", dest="ipv6", action = "store_true", help="Use IPv6")
+  parser.add_option("-4", dest="ipv4", action = "store_true", help="Use IPv4")
+  return parser
 
 #Poll each server if they are still running. Get the amount of players from the server as response
 def pollServerList(serverList):
@@ -36,7 +43,7 @@ def pollServerList(serverList):
 
 #Signal handler. Terminate every map server before quitting
 def killServerList(signal, frame):
-  print "Received system signal. Will kill all map server, then exit."
+  print "Received system signal. Will first send kill order to every map server, then exit."
   addr = ""
   port = int()
   response = ""
@@ -59,28 +66,33 @@ def createServerList(serverList):
     ser_string = ser_string + server[0] + " Map number: " + server[1] + " Player count: " + str(server[2]) + "\200"
   return ser_string
 
-def getOwnAddr():
-  #Connect to google server
+def getOwnAddr(ipv6):
+  #Connect to google DNS
   try:
-    #IPv4 server:
-    ownAddr = socket.create_connection(('8.8.8.8', 53), 5)
-
-    #Uncomment this for creating IPv6 server:
-    ownAddr = socket.create_connection(('2001:4860:4860::8888', 53), 5)
-
+    if ipv6:
+      ownAddr = socket.create_connection(('2001:4860:4860::8888', 53), 5)
+    else:
+      ownAddr = socket.create_connection(('8.8.8.8', 53), 5)
     #Retrieve own IP
     my_IP = ownAddr.getsockname()[0]
     ownAddr.close()
-    print "Retrieved own IP:", my_IP
+    #print "Retrieved own IP:", my_IP
   except socket.timeout:
     print "No connection, creating localserver"
     my_IP = 'localhost'
   return my_IP
   
 def main():
-  my_IP = getOwnAddr()
+  newParser = createCLIParser()
+  (options, args) = newParser.parse_args()
+  if options.ipv6:
+    ipv6 = True
+  else:
+    ipv6 = False
+  my_IP = getOwnAddr(ipv6)
   port = 3500
   global globalServerList
+  #Signal catcher for Ctrl+C
   signal.signal(2, killServerList)
   #Determine if we're IPv4 or IPv6:
   if(my_IP.count('.') > my_IP.count(':')):
@@ -97,7 +109,7 @@ def main():
     except socket.error:
       port += 1
 
-  print "Listening for connection on: %s %d " % (clientSocket.getsockname()[0], clientSocket.getsockname()[1])
+  print "Listening for connections on: %s %d " % (clientSocket.getsockname()[0], clientSocket.getsockname()[1])
   #print "Redirection message: ", serverAddr
   
   clientSocket.listen(1)
@@ -108,7 +120,7 @@ def main():
     recv = client.recv(1024)
     if recv[0] == 'H':
       print "Client connected from: %s %d " % (addr[0], addr[1])
-      print "Responding with serverlist of %d servers" % len(globalServerList)
+      print "Responding with server list of %d servers" % len(globalServerList)
       sendMe = createServerList(globalServerList)
       sendMe = "L%x " % (len(globalServerList)) + sendMe
       client.send(sendMe);
