@@ -26,7 +26,7 @@
 #define MAXDATASIZE 128
 #define PORT "4375"
 #define BACKLOG 10
-
+#define PORT_STR_LEN 6
 
 //Global flag for exiting
 int exit_clean = 0;
@@ -43,8 +43,9 @@ int main(int argc, char *argv[]) {
     struct addrinfo* results, hints, *i;
     struct sockaddr_storage their_addr;
     struct sockaddr_storage my_IP;
-    struct sockaddr *print_IP;
+    struct sockaddr print_IP;
     socklen_t socklen = sizeof(struct sockaddr);
+    socklen_t print_IP_len = sizeof(struct sockaddr);
     int status, listenfd, new_fd, fdmax, yes = 1;
     //int fd_limit, pid, fd;
     char map_nr;
@@ -52,6 +53,7 @@ int main(int argc, char *argv[]) {
     char* recvbuf = malloc(MAXDATASIZE * sizeof(char));
     char* sendbuf = malloc(MAXDATASIZE * sizeof(char));
     char ipstr[INET6_ADDRSTRLEN];
+    char portstr[PORT_STR_LEN];
     ssize_t nbytes; 
     pthread_t gamestate_thread;
     int IP4 = 1;
@@ -78,6 +80,10 @@ int main(int argc, char *argv[]) {
     hints.ai_family = AF_INET;
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_flags = AI_PASSIVE;
+
+    // Initialize strings
+    memset(&ipstr, 0, INET6_ADDRSTRLEN);
+    memset(&portstr, 0, PORT_STR_LEN);
 
     // Map default
     if (argc == 1) {
@@ -155,9 +161,14 @@ int main(int argc, char *argv[]) {
 	    perror("bind");
 	    exit(EXIT_FAILURE);
 	}
-	print_IP = (struct sockaddr *) &my_IP;
-	inet_ntop(print_IP->sa_family, print_IP->sa_data, ipstr, INET6_ADDRSTRLEN);
-	//printf("Server Port: %d\n", ntohs((uint16_t) print_IP->sa_data));
+
+	//Get our own IP for printing purposes
+	if(getsockname(listenfd, &print_IP, &print_IP_len) == -1) {
+	    perror("getsockname");
+	}
+	if(getnameinfo(&print_IP, print_IP_len, ipstr, INET6_ADDRSTRLEN, portstr, PORT_STR_LEN, 0) != 0) {
+	    perror("getnameinfo");
+	}
     }
     // Create local socket
     else {
@@ -210,7 +221,7 @@ int main(int argc, char *argv[]) {
     // Set the listen socket to the master set
     FD_SET(listenfd, &master);
 
-    printf("Server initialized!\nServer IP: %s\nWaiting for connections...\n", ipstr);
+    printf("Server initialized!\nServer address: %s %s\nWaiting for connections...\n", ipstr, portstr);
 
     // Initiate thread that keeps sending the clients the game state
     pthread_mutex_t lock;
