@@ -45,7 +45,7 @@ int main(int argc, char *argv[]) {
     struct sockaddr_storage my_IP;
     struct sockaddr print_IP;
     socklen_t socklen = sizeof(struct sockaddr);
-    socklen_t print_IP_len = sizeof(struct sockaddr);
+    socklen_t print_IP_len = sizeof(struct sockaddr *);
     int status, listenfd, new_fd, fdmax, yes = 1;
     //int fd_limit, pid, fd;
     char map_nr;
@@ -139,19 +139,13 @@ int main(int argc, char *argv[]) {
             fprintf(stderr, "Something went wrong while connecting to MM server\n");
             exit(EXIT_FAILURE);
         }
+
 	IP4 = isIpv4(argv[2]);
+
         // Create public IP socket
-	if(IP4) {
-	    if ((listenfd = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
-		perror("socket");
-		exit(EXIT_FAILURE);
-	    }
-	}
-	else {
-	    if ((listenfd = socket(AF_INET6, SOCK_STREAM, 0)) == -1) {
-		perror("socket");
-		exit(EXIT_FAILURE);
-	    }
+	if ((listenfd = socket(my_IP.ss_family, SOCK_STREAM, 0)) == -1) {
+	    perror("socket");
+	    exit(EXIT_FAILURE);
 	}
         if (setsockopt(listenfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1) {
             perror("setsockopt");
@@ -166,7 +160,7 @@ int main(int argc, char *argv[]) {
 	if(getsockname(listenfd, &print_IP, &print_IP_len) == -1) {
 	    perror("getsockname");
 	}
-	if(getnameinfo(&print_IP, print_IP_len, ipstr, INET6_ADDRSTRLEN, portstr, PORT_STR_LEN, 0) != 0) {
+	if(getnameinfo(&print_IP, print_IP_len, ipstr, INET6_ADDRSTRLEN, portstr, PORT_STR_LEN, NI_NUMERICHOST) != 0) {
 	    perror("getnameinfo");
 	}
     }

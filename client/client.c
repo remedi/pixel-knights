@@ -171,7 +171,7 @@ int main(int argc, char *argv[]) {
     char my_name[10];
     memset(my_name, 0, 10);
     struct termios save_term, conf_term;
-    int sock = 0, IP4 = 1, domain, exit_msg_needed = 0, flags;
+    int sock = 0, exit_msg_needed = 0, flags;
     socklen_t sock_len = sizeof(struct sockaddr_storage);
     struct sigaction sig_hand;
 
@@ -181,6 +181,8 @@ int main(int argc, char *argv[]) {
     sig_hand.sa_flags = 0;
     sigaction(SIGINT, &sig_hand, NULL);
     sigaction(SIGPIPE, &sig_hand, NULL);
+
+
     if (argc != 3 && argc != 2) {
         printf("Usage: client <ipv4> <port>\n");
 	free(buffer);
@@ -188,13 +190,6 @@ int main(int argc, char *argv[]) {
         exit(EXIT_FAILURE);
     }
     if (argc == 3) {
-	IP4 = isIpv4(argv[1]);
-	if(IP4) {
-	    domain = AF_INET;
-	}
-	else {
-	    domain = AF_INET6;
-	}
 	addr = ip_parser(argv[1], argv[2]);
     }
     else {
@@ -231,7 +226,7 @@ int main(int argc, char *argv[]) {
 
     //Setup connection. There maybe multiple loops if we first connect to a MM server
     while(!exit_clean) {
-	if ((sock = socket(domain, SOCK_STREAM, 0)) == 0) {
+	if ((sock = socket(addr.ss_family, SOCK_STREAM, 0)) == 0) {
 	    perror("socket");
 	    exit_clean = 1;
 	}
@@ -280,13 +275,6 @@ int main(int argc, char *argv[]) {
 		}
 		ip = strtok(buffer, " ");
 		port = strtok(NULL, " ");
-		IP4 = isIpv4(ip);
-		if(IP4) {
-		    domain = AF_INET;
-		}
-		else {
-		    domain = AF_INET6;
-		}
 		addr = ip_parser(ip, port);
             }
             else {
