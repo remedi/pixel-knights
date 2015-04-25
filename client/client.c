@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <signal.h>
+#include <netdb.h>
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -22,6 +23,7 @@
 
 #define BUFLEN 1000
 #define MSGLEN 40
+#define PORT_STR_LEN 6
 
 //Global variable for exiting:
 int exit_clean = 0;
@@ -163,17 +165,23 @@ int changeTermSettings(struct termios new_settings) {
 int main(int argc, char *argv[]) {
     char input_char = 1;
     struct sockaddr_storage addr;
+    struct sockaddr my_IP;
     char *buffer = malloc(BUFLEN);
     char *chat_buffer = malloc(BUFLEN);
     pthread_t thread;
     ssize_t bytes;
-    char my_id, map_nr = 1, *ip, *port;
+    char my_id, map_nr = 1, *ip, *port, IP_str[INET6_ADDRSTRLEN], port_str[PORT_STR_LEN];
     char my_name[10];
     memset(my_name, 0, 10);
     struct termios save_term, conf_term;
-    int sock = 0, exit_msg_needed = 0, flags;
+    int sock = 0, exit_msg_needed = 0, flags, udp_socket;
     socklen_t sock_len = sizeof(struct sockaddr_storage);
+    socklen_t my_IP_len = sizeof(struct sockaddr);
     struct sigaction sig_hand;
+
+    //Init strings
+    memset(IP_str, 0, INET6_ADDRSTRLEN);
+    memset(port_str, 0, PORT_STR_LEN);
 
     // Signal handler
     sig_hand.sa_handler = clean_up;
@@ -181,7 +189,6 @@ int main(int argc, char *argv[]) {
     sig_hand.sa_flags = 0;
     sigaction(SIGINT, &sig_hand, NULL);
     sigaction(SIGPIPE, &sig_hand, NULL);
-
 
     if (argc != 3 && argc != 2) {
         printf("Usage: client <ipv4> <port>\n");
@@ -230,7 +237,6 @@ int main(int argc, char *argv[]) {
 	    perror("socket");
 	    exit_clean = 1;
 	}
-
         // Connect to a server. It can be MM server or map server
         printf("main: Connecting to server..\n");
         if (connect(sock, (struct sockaddr *) &addr, sock_len) == -1) {
@@ -238,11 +244,28 @@ int main(int argc, char *argv[]) {
             printf("Exiting since connection failed\n");
             exit_clean = 1;
         }
-        if (!exit_clean) {
+        if (!exit_clean)  {
+	    //Bind UDP socket here to receive gamestate packets from server
+	    udp_socket = socket(addr.ss_family, SOCK_DGRAM, 0);
+	    if(udp_socket == -1) {
+		perror("UDP socket");
+		exit_clean = 1;
+	    }
+	    //First get own address where to bind UDP socket
+	    if(getsockname(sock, &my_IP, &my_IP_len) == -1) {
+		perror("getsockname");
+	    }
+	    if(getnameinfo(&my_IP, my_IP_len, IP_str, INET6_ADDRSTRLEN, port_str, PORT_STR_LEN, NI_NUMERICSERV) != 0) {
+		perror("getnameinfo");
+	    }
+	    printf("My ip: %s my port: %s\n", IP_str, port_str);
+	    if(bind(udp_socket, &my_IP, my_IP_len) == -1) {
+		perror("bind");
+		exit_clean = 1;
+	    }
             // Send hello message to server
             memset(buffer, '\0', BUFLEN);
-            sprintf(buffer, "H%s", my_name);
-            //printf("main: Sending 'hello' message to the server: %s\n", buffer);
+            sprintf(buffer, "H%s%c %s %s", my_name, '\0', IP_str, port_str);
             if(write(sock, buffer, strlen(buffer) + 1) < 1) {
                 perror("main, write");
                 exit_clean = 1;
@@ -260,15 +283,16 @@ int main(int argc, char *argv[]) {
                 map_nr = buffer[2];
 		//Since we're connected to a map server, we need to send 'Q<ID>' when we exit the game
    	        exit_msg_needed = 1;
-                break;
-            }
-            else if(buffer[0] == 'L') {
-                if(buffer[1] == '0') {
-                    printf("main: Connected to MM server but serverlist is empty\n");
-                    exit_clean = 1;
-                    break;
-                }
-                if(serverListParser(buffer) != 0) {
+                // We have indentified to a map server so break here
+		break;
+	    }
+	    else if(buffer[0] == 'L') {
+		if(buffer[1] == '0') {
+		    printf("main: Connected to MM server but serverlist is empty\n");
+		    exit_clean = 1;
+		    break;
+		}
+		if(serverListParser(buffer) != 0) {
 		    printf("Error with serverListParser\n");
 		    exit_clean = 1;
 		    break;
@@ -276,12 +300,12 @@ int main(int argc, char *argv[]) {
 		ip = strtok(buffer, " ");
 		port = strtok(NULL, " ");
 		addr = ip_parser(ip, port);
-            }
-            else {
-                printf("Unexpected message from server: %s\n", buffer);
-                exit_clean = 1;
-            }
-        }
+	    }
+	    else {
+		printf("Unexpected message from server: %s\n", buffer);
+		exit_clean = 1;
+	    }
+	}
     }
 
     // Fill the thread context struct and start the thread for updating map

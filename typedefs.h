@@ -33,6 +33,7 @@ struct gamestate_s {
     char* name;
     uint8_t score;
     Gamestate* next;
+    int udp_sock;
 };
 
 // Data structure for map loaded from a file
