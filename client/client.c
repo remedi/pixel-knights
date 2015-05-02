@@ -164,8 +164,8 @@ int changeTermSettings(struct termios new_settings) {
 
 int main(int argc, char *argv[]) {
     char input_char = 1;
-    struct sockaddr_storage addr;
-    struct sockaddr my_IP;
+    struct addrinfo *addr, hints;
+    struct sockaddr_storage my_IP;
     char *buffer = malloc(BUFLEN);
     char *chat_buffer = malloc(BUFLEN);
     pthread_t thread;
@@ -176,12 +176,17 @@ int main(int argc, char *argv[]) {
     struct termios save_term, conf_term;
     int sock = 0, exit_msg_needed = 0, flags, udp_socket;
     socklen_t sock_len = sizeof(struct sockaddr_storage);
-    socklen_t my_IP_len = sizeof(struct sockaddr);
+    socklen_t my_IP_len = sizeof(struct sockaddr_storage);
     struct sigaction sig_hand;
 
     //Init strings
     memset(IP_str, 0, INET6_ADDRSTRLEN);
     memset(port_str, 0, PORT_STR_LEN);
+
+    //Init hints
+    memset(&hints, 0, sizeof(struct addrinfo));
+    hints.ai_socktype = SOCK_STREAM;
+    hints.ai_family = AF_UNSPEC;
 
     // Signal handler
     sig_hand.sa_handler = clean_up;
@@ -197,10 +202,16 @@ int main(int argc, char *argv[]) {
         exit(EXIT_FAILURE);
     }
     if (argc == 3) {
-	addr = ip_parser(argv[1], argv[2]);
+	if(getaddrinfo(argv[1], argv[2], &hints, &addr) != 0) {
+	    perror("getaddrinfo");
+	    exit(EXIT_FAILURE);
+	}
     }
     else {
-        addr = ip_parser("localhost", argv[1]);
+	if(getaddrinfo("127.0.0.1", argv[2], &hints, &addr) != 0) {
+	    perror("getaddrinfo");
+	    exit(EXIT_FAILURE);
+	}
     }
 
     printf("Joining pixel knights multiplayer game...\n");
@@ -223,7 +234,6 @@ int main(int argc, char *argv[]) {
     conf_term = save_term;
     conf_term.c_lflag = (conf_term.c_lflag & ~ICANON);
     conf_term.c_lflag = (conf_term.c_lflag & ~ECHO);
-    //conf_term.c_lflag = (conf_term.c_lflag & ~ECHONL);
 
     if (changeTermSettings(conf_term) == -1) {
 	perror("Error when changing terminal settings\n");
@@ -233,33 +243,33 @@ int main(int argc, char *argv[]) {
 
     //Setup connection. There maybe multiple loops if we first connect to a MM server
     while(!exit_clean) {
-	if ((sock = socket(addr.ss_family, SOCK_STREAM, 0)) == 0) {
+	if ((sock = socket(addr->ai_family, SOCK_STREAM, 0)) == 0) {
 	    perror("socket");
 	    exit_clean = 1;
 	}
         // Connect to a server. It can be MM server or map server
-        printf("main: Connecting to server..\n");
-        if (connect(sock, (struct sockaddr *) &addr, sock_len) == -1) {
+        printf("Connecting to server..\n");
+        if (connect(sock, addr->ai_addr, sock_len) == -1) {
             perror("main, connect");
             printf("Exiting since connection failed\n");
             exit_clean = 1;
         }
         if (!exit_clean)  {
 	    //Bind UDP socket here to receive gamestate packets from server
-	    udp_socket = socket(addr.ss_family, SOCK_DGRAM, 0);
+	    udp_socket = socket(addr->ai_family, SOCK_DGRAM, 0);
 	    if(udp_socket == -1) {
 		perror("UDP socket");
 		exit_clean = 1;
 	    }
 	    //First get own address where to bind UDP socket
-	    if(getsockname(sock, &my_IP, &my_IP_len) == -1) {
+	    if(getsockname(sock, (struct sockaddr *) &my_IP, &my_IP_len) == -1) {
 		perror("getsockname");
 	    }
-	    if(getnameinfo(&my_IP, my_IP_len, IP_str, INET6_ADDRSTRLEN, port_str, PORT_STR_LEN, NI_NUMERICSERV) != 0) {
+	    if(getnameinfo((struct sockaddr *) &my_IP, my_IP_len, IP_str, INET6_ADDRSTRLEN, port_str, PORT_STR_LEN, NI_NUMERICSERV) != 0) {
 		perror("getnameinfo");
 	    }
 	    printf("My ip: %s my port: %s\n", IP_str, port_str);
-	    if(bind(udp_socket, &my_IP, my_IP_len) == -1) {
+	    if(bind(udp_socket, (struct sockaddr *) &my_IP, my_IP_len) == -1) {
 		perror("bind");
 		exit_clean = 1;
 	    }
@@ -277,7 +287,7 @@ int main(int argc, char *argv[]) {
                 exit_clean = 1;
             }
             if(buffer[0] == 'I') {
-                //Receive ID message
+                //Received ID message
                 printf("main: ID message: ID: %d Map nr: %d\n", buffer[1], buffer[2]);
                 my_id = buffer[1];
                 map_nr = buffer[2];
@@ -287,6 +297,7 @@ int main(int argc, char *argv[]) {
 		break;
 	    }
 	    else if(buffer[0] == 'L') {
+                //Received server list
 		if(buffer[1] == '0') {
 		    printf("main: Connected to MM server but serverlist is empty\n");
 		    exit_clean = 1;
@@ -299,7 +310,11 @@ int main(int argc, char *argv[]) {
 		}
 		ip = strtok(buffer, " ");
 		port = strtok(NULL, " ");
-		addr = ip_parser(ip, port);
+		freeaddrinfo(addr);
+		if(getaddrinfo(ip, port, &hints, &addr) != 0) {
+		    perror("getaddrinfo");
+		    exit(EXIT_FAILURE);
+		}
 	    }
 	    else {
 		printf("Unexpected message from server: %s\n", buffer);
@@ -386,6 +401,7 @@ int main(int argc, char *argv[]) {
     //Free memory allocated for chat messages
     free(buffer);
     free(chat_buffer);
+    freeaddrinfo(addr);
 
     //Set back old settings
     if(changeTermSettings(save_term) != 0) {

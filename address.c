@@ -5,6 +5,7 @@
 #include <arpa/inet.h>
 #include <stdio.h>
 #include <errno.h>
+#include <netdb.h>
 
 #include "address.h"
 
@@ -29,28 +30,22 @@ int isIpv4(char *buf) {
 }
 
 //Parse ip and port from character strings to a type: struct sockaddr_storage
-struct sockaddr_storage ip_parser(char *ip, char *port) {
-    struct sockaddr_in6 temp6;
-    struct sockaddr_in temp4; 
-    struct sockaddr_storage ret_addr;
-    memset(&temp4, 0, sizeof(struct sockaddr_in));
-    memset(&temp6, 0, sizeof(struct sockaddr_in6));
-    memset(&ret_addr, 0, sizeof(struct sockaddr_storage));
-    if(isIpv4(ip)) {
-	if(inet_pton(AF_INET, ip, &temp4.sin_addr) < 1) {
-	    perror("inet_pton");
-	}
-	temp4.sin_port = ntohs(strtol(port, NULL, 10));
-	temp4.sin_family = AF_INET;
-	memcpy(&ret_addr, &temp4, sizeof(struct sockaddr_in));
+struct addrinfo ip_parser(char *ip, char *port) {
+    struct addrinfo *addr;
+    struct addrinfo retaddr;
+    struct addrinfo hints;
+    memset(&retaddr, 0, sizeof(struct addrinfo));
+    //memset(*addr, 0, sizeof(struct addrinfo));
+    memset(&hints, 0, sizeof(struct addrinfo));
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_socktype = SOCK_STREAM;
+    if(getaddrinfo(ip, port, &hints, &addr) != 0) {
+	perror("getaddrinfo");
     }
-    else {
-	if(inet_pton(AF_INET6, ip, &temp6.sin6_addr) < 1) {
-	    perror("inet_pton");
-	}
-	temp6.sin6_port = ntohs(strtol(port, NULL, 10));
-	temp6.sin6_family = AF_INET6;
-	memcpy(&ret_addr, &temp6, sizeof(struct sockaddr_in6));
-    }
-    return ret_addr;
+    memcpy(&retaddr, addr, sizeof(struct addrinfo));
+    memcpy(&retaddr.ai_addr, addr->ai_addr, sizeof(addr->ai_addrlen));
+    //memcpy(&(retaddr.ai_addr), addr->ai_addr, addr->ai_addrlen);
+    retaddr.ai_next = NULL;
+    freeaddrinfo(addr);
+    return retaddr;
 }

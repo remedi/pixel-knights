@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <netdb.h>
 
 #include "../maps/maps.h"
 #include "../address.h"
@@ -268,31 +269,25 @@ int randomCoord(Gamestate *g, Mapdata *m, Coord *c) {
 // Announce map server to matchmaking server
 int registerToMM(char *MM_IP, char *MM_port, char map_nr, struct sockaddr_storage* my_IP) {
     int sock;
-    //struct sockaddr_in sock_addr_in;
-    struct sockaddr_storage addr;
-    //struct sockaddr_storage sock_addr_in;
-    //struct sockaddr_storage sock_addr_in6;
+    struct addrinfo *addr, hints;
     char message[2];
     socklen_t my_IP_len = sizeof(struct sockaddr_storage);
-    int IP4, domain, so_reuseaddr = 1;
+    int so_reuseaddr = 1;
 
     // The message sent to MM server contains 'S' + map number
     message[0] = 'S';
     message[1] = map_nr;
 
-    IP4 = isIpv4(MM_IP);
+    memset(&hints, 0, sizeof(struct addrinfo));
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_socktype = SOCK_STREAM;
 
-    //memset(&sock_addr_in6, 0, sizeof(struct sockaddr_storage));
-    memset(&addr, 0, sizeof(struct sockaddr_storage));
+    if(getaddrinfo(MM_IP, MM_port, &hints, &addr) != 0) {
+	perror("getaddrinfo");
+	return -1;
+    }
 
-    // Create socket of corred domain. Give it linger option because we will use this port again
-    if(IP4) {
-	domain = AF_INET;
-    }
-    else {
-	domain = AF_INET6;
-    }
-    if ((sock = socket(domain, SOCK_STREAM, 0)) < 0) {
+    if ((sock = socket(addr->ai_family, SOCK_STREAM, 0)) < 0) {
 	perror("MM socket, create");
 	return -1;
     }
@@ -301,8 +296,7 @@ int registerToMM(char *MM_IP, char *MM_port, char map_nr, struct sockaddr_storag
 	exit(EXIT_FAILURE);
     }
 
-    addr = ip_parser(MM_IP, MM_port);
-    if (connect(sock, (struct sockaddr *) &addr, sizeof(addr)) == -1) {
+    if (connect(sock, addr->ai_addr, addr->ai_addrlen) == -1) {
 	perror("MM socket, connect");
 	return -1;
     }
@@ -318,27 +312,17 @@ int registerToMM(char *MM_IP, char *MM_port, char map_nr, struct sockaddr_storag
         return -1;
     }
 
+
     // OK reply from MM
     if (message[0] == 'O') {
 	if (getsockname(sock, (struct sockaddr *) my_IP, &my_IP_len) == -1) {
 	    perror("getsockname");
 	    return -1;
 	} 
-	/*if(IP4) {
-	  if (getsockname(sock, (struct sockaddr *) my_IP, &my_IP_len) == -1) {
-	  perror("getsockname");
-	  return -1;
-	  } 
-	  }
-	  else {
-	  if (getsockname(sock, (struct sockaddr *) my_IP6, &my_IP6_len) == -1) {
-	  perror("getsockname");
-	  return -1;
-	  } 
-	  }*/
         if(close(sock) == -1) {
 	    perror("close");
 	}
+	freeaddrinfo(addr);
         return 0;
     }
     // Something went wrong
